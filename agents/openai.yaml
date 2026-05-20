@@ -1,0 +1,6 @@
+interface:
+  display_name: "Learning Accelerator"
+  short_description: "AI Learning OS for technical mastery"
+  default_prompt: "Use $learning-accelerator as an AI Learning OS to track my learning state, teach through projects, generate exercises, review weak points, analyze code errors, and adjust difficulty."
+policy:
+  allow_implicit_invocation: true

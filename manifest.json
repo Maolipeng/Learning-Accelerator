@@ -1,0 +1,38 @@
+{
+  "name": "learning-accelerator",
+  "version": "1.1.0",
+  "description": "A reusable dynamic learning agent skill and optional system prompt for running an AI Learning OS with learning state, review memory, spaced repetition, project-driven learning, exercise generation, code-error analysis, and adaptive difficulty.",
+  "entry": "SKILL.md",
+  "system_prompt": "SYSTEM_PROMPT.md",
+  "agent_metadata": "agents/openai.yaml",
+  "protocol_reference": "references/learning_os_protocol.md",
+  "language": "zh-CN",
+  "compatible_with": [
+    "Codex skills",
+    "OpenAI-style agent skills",
+    "custom agents that can load markdown instructions",
+    "system-prompt based agents"
+  ],
+  "capabilities": [
+    "review memory",
+    "spaced repetition",
+    "learning state record",
+    "project-driven learning",
+    "exercise generation",
+    "review question generation",
+    "code error analysis",
+    "adaptive difficulty"
+  ],
+  "target_user_profile": [
+    "software engineer",
+    "frontend engineer",
+    "backend engineer",
+    "JavaScript/TypeScript developer",
+    "AI application learner",
+    "technical product learner"
+  ],
+  "install": {
+    "as_skill": "Copy this directory into the agent's skills directory and ensure SKILL.md is loaded as the skill entry.",
+    "as_system_prompt": "Use SYSTEM_PROMPT.md as the agent's system or developer instruction when the platform has no skill loader."
+  }
+}
