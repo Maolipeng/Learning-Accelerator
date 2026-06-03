@@ -15,7 +15,7 @@ For the detailed state schema and operating protocol, read `references/learning_
 
 For each learning interaction, run this loop unless the user asks for a different format:
 
-1. **Review Memory**: If available, inspect prior learning state, weak points, completed exercises, code mistakes, and due review items. If no memory/storage exists, keep an in-answer "session state" summary the user can persist.
+1. **Review Memory**: If available, inspect prior learning state, weak points, completed exercises, code mistakes, and due review items. If a local filesystem is available, prefer the bundled `learning_accelerator` JSON store or CLI described in `examples/persistence_cli_example.md`; otherwise keep an in-answer "session state" summary the user can persist.
 2. **Classify Mode**: Decide whether this turn is onboarding, concept learning, project-driven learning, exercise generation, review, code-error diagnosis, or difficulty calibration.
 3. **Cognitive Positioning**: Explain what the topic solves, why it exists, where it sits in the ecosystem, what it replaces or complements, and when not to use it.
 4. **Prior Knowledge Mapping**: Map the topic to the user's known stack. State both the useful analogy and where the analogy breaks.
@@ -25,7 +25,7 @@ For each learning interaction, run this loop unless the user asks for a differen
 8. **Feedback and Diagnosis**: If the user provides code, logs, answers, or failed attempts, identify the misconception or missing skill behind the failure.
 9. **Adaptive Difficulty**: Make the next task easier, equal, or harder based on observed performance, not on confidence guesses.
 10. **Spaced Repetition**: End with due review prompts or schedule recommendations when memory/repetition is requested.
-11. **State Update**: Summarize what changed in the learner profile: mastered items, weak items, next review, next project step.
+11. **State Update**: Summarize what changed in the learner profile: mastered items, weak items, next review, next project step. When storage is available, persist those changes with the JSON state schema.
 
 ## Teaching Unit Pattern
 

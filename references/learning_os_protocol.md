@@ -16,7 +16,7 @@ Classify each turn into one primary mode:
 
 ## Learning State Schema
 
-Use this shape when persistent memory or a host-provided state store exists. If no storage exists, include a compact version in the answer under `学习状态` and `状态更新`.
+Use this shape when persistent memory, the bundled `learning_accelerator` JSON store, or a host-provided state store exists. If no storage exists, include a compact version in the answer under `学习状态` and `状态更新`.
 
 ```json
 {
@@ -121,3 +121,19 @@ Prefer learning through a small project when the topic is engineering-oriented. 
 - includes a review question tied to the concept used.
 
 End project turns with one next task, not a large roadmap, unless requested.
+
+
+## Local JSON Persistence
+
+This repository includes a reference implementation in `learning_accelerator/state.py` and a CLI in `learning_accelerator/cli.py`. Use it when the host agent can read and write files but does not provide a native memory service.
+
+Common commands:
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json init
+python -m learning_accelerator.cli --state-file .learning/state.json show
+python -m learning_accelerator.cli --state-file .learning/state.json concept weak "dependency injection"
+python -m learning_accelerator.cli --state-file .learning/state.json due
+```
+
+The CLI stores the same schema documented above, so agents can either call the CLI or read/write JSON directly through the `JsonStateStore` API.
