@@ -34,6 +34,7 @@ def main():
         ROOT / ".cursor" / "rules" / "learning-accelerator.mdc",
         ROOT / "README.md",
         ROOT / "manifest.json",
+        ROOT / "skills.sh.json",
         ROOT / "agents" / "openai.yaml",
         ROOT / "docs" / "install.md",
         ROOT / "docs" / "platforms.md",
@@ -121,10 +122,18 @@ def main():
         "as_skills_sh",
         "npx skills find",
         "npx skills add",
+        "skills_sh_page_config",
         "distribution",
         "codex_skill_installer",
         "github_source",
         "as_codex_local_dev",
+    ])
+
+    assert_contains(ROOT / "skills.sh.json", [
+        "https://skills.sh/schemas/skills.sh.schema.json",
+        "Learning",
+        "learning-accelerator",
+        "spaced repetition",
     ])
 
     assert_contains(ROOT / "references" / "learning_os_protocol.md", [
@@ -218,7 +227,10 @@ def main():
         "Install From GitHub In Codex",
         "skills.sh",
         "npx skills find learning accelerator",
-        "npx skills add <owner>/Learning-Accelerator",
+        "npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator",
+        "skills.sh Publication Checklist",
+        "skills.sh.json",
+        "anonymous telemetry",
         "Codex `skill-installer` and `npx skills` are complementary",
         "skill-installer",
         "Restart Codex",
@@ -272,7 +284,7 @@ def test_cli_and_coverage_configuration():
         "skill-installer",
         "skills.sh",
         "npx skills find learning accelerator",
-        "npx skills add <owner>/Learning-Accelerator",
+        "npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator",
         "docs/install.md",
         "安装后重启 Codex",
         "不要求用户预先懂前端或编程",

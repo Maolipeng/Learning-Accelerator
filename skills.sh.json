@@ -1,0 +1,13 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Learning",
+      "description": "Skills for adaptive learning, spaced repetition, exercise tracking, and study state persistence.",
+      "skills": [
+        "learning-accelerator"
+      ]
+    }
+  ]
+}

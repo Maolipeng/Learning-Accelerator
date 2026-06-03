@@ -97,16 +97,16 @@ Use skill-installer to install the Learning-Accelerator skill from https://githu
 
 ```bash
 npx skills find learning accelerator
-npx skills add <owner>/Learning-Accelerator
+npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator
 ```
 
 对应的目录页通常是：
 
 ```text
-https://skills.sh/<owner>/Learning-Accelerator
+https://skills.sh/Maolipeng/Learning-Accelerator/learning-accelerator
 ```
 
-当前如果 `npx skills find learning accelerator` 还搜不到，说明项目尚未被 skills.sh 收录；这时优先使用上面的 GitHub URL 安装方式。
+如果 `npx skills find learning accelerator` 还搜不到，先运行一次 `npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator` 从公开 GitHub 仓库安装。skills.sh 的搜索和排行榜依赖 Skills CLI 的匿名安装遥测，首次安装后通常需要等待缓存刷新。
 
 本地开发安装才需要手动复制：
 

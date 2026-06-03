@@ -24,22 +24,40 @@ skills.sh is the public agent skills directory. If Learning Accelerator is publi
 
 ```bash
 npx skills find learning accelerator
-npx skills add <owner>/Learning-Accelerator
+npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator
 ```
 
 The public skill page should look like:
 
 ```text
-https://skills.sh/<owner>/Learning-Accelerator
+https://skills.sh/Maolipeng/Learning-Accelerator/learning-accelerator
 ```
 
-If `npx skills find learning accelerator` does not return this project, it has not been indexed by skills.sh yet. In that case, use the GitHub URL installation path above.
+If `npx skills find learning accelerator` does not return this project yet, install it once from the public GitHub repository:
+
+```bash
+npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator
+```
+
+skills.sh listings are driven by anonymous telemetry from the Skills CLI. After the first public install, wait for the skills.sh cache to refresh before expecting search results to appear.
+
+This repository also includes `skills.sh.json` to customize the skills.sh repository page after the telemetry service has seen the repo.
 
 Codex `skill-installer` and `npx skills` are complementary:
 
 - `skill-installer` is convenient inside Codex when you already know the GitHub repository URL.
 - `npx skills find` is better for public discovery across Claude Code, Cursor, Codex, Gemini, and other compatible agents.
 - `npx skills add` is the cross-agent one-command install path once the skill is published in the public ecosystem.
+
+## skills.sh Publication Checklist
+
+Before expecting discovery to work:
+
+1. Push this repository to the public GitHub source: `Maolipeng/Learning-Accelerator`.
+2. Confirm the CLI can see the skill: `npx skills add Maolipeng/Learning-Accelerator --list`.
+3. Trigger the first public install: `npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator`.
+4. Wait for skills.sh cache refresh, then run: `npx skills find learning accelerator`.
+5. Check the page: `https://skills.sh/Maolipeng/Learning-Accelerator/learning-accelerator`.
 
 ## Local Development Install
 

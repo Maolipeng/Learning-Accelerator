@@ -59,7 +59,7 @@
   "install": {
     "as_skill": "Copy this directory into the agent's skills directory and ensure SKILL.md is loaded as the skill entry.",
     "as_codex_skill": "Use Codex skill-installer with the published GitHub repository URL, then restart Codex.",
-    "as_skills_sh": "After public indexing, install with npx skills add <owner>/Learning-Accelerator and discover with npx skills find learning accelerator.",
+    "as_skills_sh": "After public indexing, install with npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator and discover with npx skills find learning accelerator.",
     "as_codex_local_dev": "For local development only, copy this directory into ~/.codex/skills/learning-accelerator.",
     "as_claude_code_skill": "Copy this directory into ~/.claude/skills/learning-accelerator or use CLAUDE.md as project memory.",
     "as_cursor_rule": "Copy .cursor/rules/learning-accelerator.mdc into a Cursor project.",
@@ -70,7 +70,8 @@
   "distribution": {
     "github_source": "Repository root is the skill root because SKILL.md is at the top level.",
     "codex_skill_installer": "Use when the repository URL is known and the user is working inside Codex.",
-    "skills_sh": "Use npx skills find for discovery and npx skills add for cross-agent installation after public indexing."
+    "skills_sh": "Use npx skills find for discovery and npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator for cross-agent installation after public indexing.",
+    "skills_sh_page_config": "skills.sh.json groups the skill on the skills.sh repository page after the repo is seen by CLI telemetry."
   },
   "persistence": {
     "type": "local JSON",
