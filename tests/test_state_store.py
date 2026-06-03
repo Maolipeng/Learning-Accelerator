@@ -65,6 +65,64 @@ def test_profile_supports_general_learning_domain_and_known_skills(tmp_path):
     assert "已知技能：中文写作, 基础拼音" in prompt_context
 
 
+def test_profile_uses_general_outcome_fields_with_legacy_project_compatibility(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+
+    state = store.update_profile(
+        learning_domain="communication",
+        learning_goal="提升公开演讲",
+        target_outcome="完成 3 分钟演讲",
+    )
+    state = store.add_task("录音一次并复盘卡顿点")
+
+    assert state["learner_profile"]["target_outcome"] == "完成 3 分钟演讲"
+    assert state["learner_profile"]["target_project"] == "完成 3 分钟演讲"
+    assert state["practice_state"]["current_tasks"][0]["name"] == "录音一次并复盘卡顿点"
+    assert state["practice_state"]["current_project_tasks"] == ["录音一次并复盘卡顿点"]
+
+    summary = store.summary()
+    prompt_context = store.prompt_context()
+    assert summary["target_outcome"] == "完成 3 分钟演讲"
+    assert summary["current_tasks"][0]["name"] == "录音一次并复盘卡顿点"
+    assert "目标结果：完成 3 分钟演讲" in prompt_context
+    assert "下一步任务：录音一次并复盘卡顿点" in prompt_context
+
+
+def test_legacy_project_fields_are_migrated_to_general_task_fields(tmp_path):
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        json.dumps({
+            "learner_profile": {
+                "target_project": "RAG API",
+                "learning_goal": "Learn FastAPI",
+            },
+            "practice_state": {
+                "current_project_tasks": ["Build /ask mock API"],
+            },
+        }),
+        encoding="utf-8",
+    )
+    store = JsonStateStore(state_file)
+
+    state = store.load()
+
+    assert state["learner_profile"]["target_outcome"] == "RAG API"
+    assert state["practice_state"]["current_tasks"][0]["name"] == "Build /ask mock API"
+
+
+def test_domain_templates_are_available_for_general_learning(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+
+    language = store.domain_template("language")
+    technology = store.domain_template("technology")
+    unknown = store.domain_template("unknown-domain")
+
+    assert language["domain"] == "language"
+    assert "发音" in language["focus_areas"]
+    assert "代码" in technology["practice_types"]
+    assert unknown["domain"] == "general"
+
+
 def test_recording_mastered_concept_removes_it_from_weak_list(tmp_path):
     store = JsonStateStore(tmp_path / "state.json")
 

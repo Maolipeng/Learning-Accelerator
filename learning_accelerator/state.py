@@ -25,6 +25,7 @@ DEFAULT_STATE: dict[str, Any] = {
         "preferred_language": "zh-CN",
         "experience_level": "unknown",
         "learning_goal": "",
+        "target_outcome": "",
         "target_project": "",
         "constraints": [],
     },
@@ -39,6 +40,7 @@ DEFAULT_STATE: dict[str, Any] = {
     "practice_state": {
         "completed_exercises": [],
         "failed_exercises": [],
+        "current_tasks": [],
         "current_project_tasks": [],
         "last_code_errors": [],
     },
@@ -64,6 +66,51 @@ REVIEW_INTERVALS_BY_RESULT = {
 
 POSITIVE_DIFFICULTY_SIGNALS = {"exercise_completed", "explain_correct", "recall_correct"}
 NEGATIVE_DIFFICULTY_SIGNALS = {"exercise_failed", "recall_incorrect", "explain_fuzzy", "setup_failed"}
+
+DOMAIN_TEMPLATES: dict[str, dict[str, Any]] = {
+    "general": {
+        "domain": "general",
+        "focus_areas": ["核心概念", "薄弱点", "练习", "复习"],
+        "practice_types": ["解释复述", "小练习", "真实任务", "回顾问题"],
+        "review_strategy": "Select 2-5 weak or recently learned items for spaced repetition.",
+        "onboarding_questions": ["你想学习什么主题？", "你现在熟悉哪些技能、工具或相关经验？", "你希望达到什么具体结果？", "你每天或每周能投入多少时间？"],
+    },
+    "technology": {
+        "domain": "technology",
+        "focus_areas": ["概念", "语法/API", "工程实践", "调试", "测试"],
+        "practice_types": ["代码", "小项目", "调试练习", "架构解释"],
+        "review_strategy": "Review concepts, common mistakes, and project decisions.",
+        "onboarding_questions": ["你想学哪门语言、框架、工具或架构？", "你现在熟悉哪些技术栈？", "你想做出什么可运行成果？", "你更想概念入门、项目实战还是错误诊断？"],
+    },
+    "language": {
+        "domain": "language",
+        "focus_areas": ["发音", "词汇", "句型", "听说读写", "文化语境"],
+        "practice_types": ["跟读", "听写", "造句", "翻译", "小测"],
+        "review_strategy": "Review weak vocabulary, sentence patterns, pronunciation, and recent mistakes.",
+        "onboarding_questions": ["你想学习什么主题或哪门语言？", "你的目标是日常交流、考试、阅读还是写作？", "你现在熟悉哪些语言或发音体系？", "你每天能练多久？"],
+    },
+    "exam": {
+        "domain": "exam",
+        "focus_areas": ["考纲", "题型", "错题", "薄弱章节", "时间管理"],
+        "practice_types": ["专项题", "模拟题", "错题复盘", "限时练习"],
+        "review_strategy": "Review wrong answers, repeated weak chapters, and high-frequency exam patterns.",
+        "onboarding_questions": ["你准备什么考试？", "考试日期或目标分数是什么？", "你目前最薄弱的题型或章节是什么？", "你每周能安排几次练习？"],
+    },
+    "writing": {
+        "domain": "writing",
+        "focus_areas": ["结构", "观点", "语言", "修改", "读者反馈"],
+        "practice_types": ["短文", "改写", "提纲", "段落练习", "复盘"],
+        "review_strategy": "Review repeated writing issues, structure patterns, and revised drafts.",
+        "onboarding_questions": ["你想提升哪类写作？", "你现在常遇到的问题是什么？", "有没有目标读者或发表场景？", "你愿意每次写多少字？"],
+    },
+    "communication": {
+        "domain": "communication",
+        "focus_areas": ["结构化表达", "听众意识", "临场反应", "语速", "反馈"],
+        "practice_types": ["60 秒表达", "录音复盘", "演讲提纲", "问答模拟"],
+        "review_strategy": "Review structure, repeated hesitations, unclear points, and feedback notes.",
+        "onboarding_questions": ["你想提升公开演讲、汇报、面试还是日常沟通？", "你最容易卡在哪一步？", "你是否愿意录音或写提纲复盘？", "你希望达到什么具体场景结果？"],
+    },
+}
 
 
 class LearningStateError(ValueError):
@@ -180,6 +227,7 @@ class JsonStateStore:
         preferred_language: str | None = None,
         experience_level: str | None = None,
         learning_goal: str | None = None,
+        target_outcome: str | None = None,
         target_project: str | None = None,
         constraint: str | None = None,
     ) -> dict[str, Any]:
@@ -205,13 +253,36 @@ class JsonStateStore:
             profile["experience_level"] = experience_level
         if learning_goal is not None:
             profile["learning_goal"] = learning_goal
+        if target_outcome is not None:
+            profile["target_outcome"] = target_outcome
+            profile["target_project"] = target_outcome
         if target_project is not None:
             profile["target_project"] = target_project
+            if target_outcome is None:
+                profile["target_outcome"] = target_project
         if constraint:
             constraints = _ensure_list(profile.get("constraints"), "constraints")
             if constraint not in constraints:
                 constraints.append(constraint)
             profile["constraints"] = constraints
+        return self.save(state)
+
+    def add_task(self, name: str, notes: str = "") -> dict[str, Any]:
+        """Add a current learning task, keeping legacy project task compatibility."""
+
+        state = self.load()
+        item = {
+            "id": _stable_id("task", name),
+            "name": name,
+            "notes": notes,
+            "status": "pending",
+            "created_at": today_iso(),
+        }
+        tasks = _ensure_list(state["practice_state"].get("current_tasks"), "current_tasks")
+        state["practice_state"]["current_tasks"] = _upsert_by_id(tasks, item)
+        state["practice_state"]["current_project_tasks"] = [
+            task["name"] for task in state["practice_state"]["current_tasks"]
+        ]
         return self.save(state)
 
     def set_topic(self, topic: str, level: str | None = None) -> dict[str, Any]:
@@ -364,12 +435,14 @@ class JsonStateStore:
             "learning_domain": profile.get("learning_domain", "general"),
             "known_skills": profile.get("known_skills", profile.get("known_stack", [])),
             "learning_goal": profile.get("learning_goal", ""),
+            "target_outcome": profile.get("target_outcome", profile.get("target_project", "")),
             "target_project": profile.get("target_project", ""),
             "current_topic": topic.get("current_topic", ""),
             "level": topic.get("level", "beginner"),
             "mastered_concepts": topic.get("mastered_concepts", []),
             "weak_concepts": topic.get("weak_concepts", []),
             "due_reviews": self.due_reviews(on_date=on_date),
+            "current_tasks": practice.get("current_tasks", []),
             "current_project_tasks": practice.get("current_project_tasks", []),
             "current_difficulty": difficulty.get("current_difficulty", 1),
             "next_adjustment": difficulty.get("next_adjustment", "same"),
@@ -385,13 +458,24 @@ class JsonStateStore:
             f"已知技能：{', '.join(summary['known_skills']) if summary['known_skills'] else '未设置'}",
             f"当前学习目标：{summary['learning_goal'] or '未设置'}",
             f"当前主题：{summary['current_topic'] or '未设置'}",
-            f"目标任务/项目：{summary['target_project'] or '未设置'}",
+            f"目标结果：{summary['target_outcome'] or '未设置'}",
             f"薄弱点：{', '.join(summary['weak_concepts']) if summary['weak_concepts'] else '无'}",
             f"今天需要复习：{', '.join(due_concepts) if due_concepts else '无'}",
-            f"下一步任务/项目：{', '.join(summary['current_project_tasks']) if summary['current_project_tasks'] else '未设置'}",
+            f"下一步任务：{', '.join(task['name'] for task in summary['current_tasks']) if summary['current_tasks'] else '未设置'}",
             f"当前难度：{summary['current_difficulty']}，下一步调整：{summary['next_adjustment']}",
         ]
         return "\n".join(lines)
+
+    def onboarding_questions(self, domain: str | None = None) -> dict[str, Any]:
+        """Return onboarding questions for a learning domain."""
+
+        return self.domain_template(domain or "general")
+
+    @staticmethod
+    def domain_template(domain: str) -> dict[str, Any]:
+        """Return a domain template, falling back to the general template."""
+
+        return copy.deepcopy(DOMAIN_TEMPLATES.get(domain, DOMAIN_TEMPLATES["general"]))
 
     @staticmethod
     def migrate(state: dict[str, Any]) -> dict[str, Any]:
@@ -403,7 +487,28 @@ class JsonStateStore:
             profile["known_skills"] = list(profile.get("known_stack", []))
         if "learning_domain" not in profile:
             profile["learning_domain"] = "technology" if profile.get("known_stack") else "general"
+        if not profile.get("target_outcome"):
+            profile["target_outcome"] = profile.get("target_project", "")
+        if not profile.get("target_project"):
+            profile["target_project"] = profile.get("target_outcome", "")
         state["learner_profile"] = profile
+        practice_state = state.get("practice_state", {})
+        if not practice_state.get("current_tasks"):
+            practice_state["current_tasks"] = [
+                {
+                    "id": _stable_id("task", str(task)),
+                    "name": str(task),
+                    "notes": "",
+                    "status": "pending",
+                    "created_at": today_iso(),
+                }
+                for task in _ensure_list(practice_state.get("current_project_tasks"), "current_project_tasks")
+            ]
+        if not practice_state.get("current_project_tasks"):
+            practice_state["current_project_tasks"] = [
+                str(task.get("name", "")) for task in _ensure_list(practice_state.get("current_tasks"), "current_tasks")
+            ]
+        state["practice_state"] = practice_state
         review_state = state.get("review_state", {})
         for key in ("due_items", "next_review_items", "review_history"):
             items = _ensure_list(review_state.get(key), key)

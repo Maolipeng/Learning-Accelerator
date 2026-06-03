@@ -35,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_context = subparsers.add_parser("prompt-context", help="Print concise prompt context for another agent.")
     prompt_context.add_argument("--date", help="ISO date for due review filtering, defaults to today.")
 
+    onboarding = subparsers.add_parser("onboarding", help="Print onboarding questions for a learning domain.")
+    onboarding.add_argument("--domain", default="general", help="Learning domain, e.g. language or technology.")
+
+    domain_template = subparsers.add_parser("domain-template", help="Print a domain learning template as JSON.")
+    domain_template.add_argument("domain", help="Learning domain, e.g. language, exam, writing.")
+
     profile = subparsers.add_parser("profile", help="Update learner profile fields.")
     profile.add_argument("--domain", help="Learning domain, e.g. technology, language, exam, writing, fitness.")
     profile.add_argument("--known-stack", nargs="*", help="Known technologies, kept for compatibility.")
@@ -46,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Learner experience level.",
     )
     profile.add_argument("--goal", help="Learning goal.")
+    profile.add_argument("--outcome", help="Target learning outcome.")
     profile.add_argument("--project", help="Target project.")
     profile.add_argument("--constraint", help="Add one learning constraint.")
 
@@ -92,6 +99,13 @@ def build_parser() -> argparse.ArgumentParser:
     exercise.add_argument("--concept", action="append", default=[], help="Concept covered by this exercise.")
     exercise.add_argument("--notes", default="", help="Optional exercise notes.")
 
+    task = subparsers.add_parser("task", help="Manage current learning tasks.")
+    task_subparsers = task.add_subparsers(dest="task_command", required=True)
+    task_add = task_subparsers.add_parser("add", help="Add a current learning task.")
+    task_add.add_argument("name", help="Task name.")
+    task_add.add_argument("--notes", default="", help="Optional task notes.")
+    task_subparsers.add_parser("list", help="List current learning tasks.")
+
     evidence = subparsers.add_parser("evidence", help="Record difficulty-adjustment evidence.")
     evidence.add_argument("signal", help="Evidence signal, e.g. exercise_completed or recall_incorrect.")
     evidence.add_argument("detail", nargs="?", default="", help="Evidence detail.")
@@ -111,6 +125,12 @@ def main(argv: list[str] | None = None) -> int:
         _print_json(store.summary(on_date=args.date))
     elif args.command == "prompt-context":
         print(store.prompt_context(on_date=args.date))
+    elif args.command == "onboarding":
+        template = store.onboarding_questions(args.domain)
+        for question in template["onboarding_questions"]:
+            print(question)
+    elif args.command == "domain-template":
+        _print_json(store.domain_template(args.domain))
     elif args.command == "profile":
         _print_json(
             store.update_profile(
@@ -120,6 +140,7 @@ def main(argv: list[str] | None = None) -> int:
                 preferred_language=args.language,
                 experience_level=args.experience_level,
                 learning_goal=args.goal,
+                target_outcome=args.outcome,
                 target_project=args.project,
                 constraint=args.constraint,
             )
@@ -144,6 +165,11 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "exercise":
         status = "completed" if args.status == "complete" else "failed"
         _print_json(store.record_exercise(args.name, status=status, concepts=args.concept, notes=args.notes))
+    elif args.command == "task":
+        if args.task_command == "add":
+            _print_json(store.add_task(args.name, notes=args.notes))
+        elif args.task_command == "list":
+            _print_json(store.load()["practice_state"]["current_tasks"])
     elif args.command == "evidence":
         _print_json(store.record_evidence(args.signal, args.detail, source=args.source))
     return 0

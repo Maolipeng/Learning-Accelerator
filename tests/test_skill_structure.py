@@ -131,6 +131,11 @@ def main():
         "experience_level",
         "learning_domain",
         "known_skills",
+        "target_outcome",
+        "current_tasks",
+        "onboarding --domain",
+        "domain-template",
+        "task add",
     ])
 
     assert_contains(ROOT / "examples" / "no_prior_programming_example.md", [
@@ -245,6 +250,9 @@ def test_cli_and_coverage_configuration():
         "--experience-level no_programming",
         "--domain language",
         "--known-skill",
+        "onboarding --domain language",
+        "domain-template language",
+        "task add",
         "先问我目前熟悉哪些技能或工具",
         "AGENTS.md",
         "CLAUDE.md",

@@ -178,6 +178,13 @@ python -m learning_accelerator.cli --state-file .learning/state.json profile \
   --project "RAG notebook API"
 ```
 
+开始一条新学习线前，可以先输出 onboarding 问题：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json onboarding --domain language
+python -m learning_accelerator.cli --state-file .learning/state.json domain-template language
+```
+
 如果用户完全零基础，可以这样记录：
 
 ```bash
@@ -194,7 +201,8 @@ python -m learning_accelerator.cli --state-file .learning/state.json profile \
   --domain language \
   --known-skill "中文拼音" \
   --experience-level beginner \
-  --goal "通过日语 N5"
+  --goal "通过日语 N5" \
+  --outcome "能读写基础假名"
 ```
 
 设置主题、记录薄弱点并安排复习：
@@ -203,6 +211,7 @@ python -m learning_accelerator.cli --state-file .learning/state.json profile \
 python -m learning_accelerator.cli --state-file .learning/state.json topic "FastAPI dependency injection" --level beginner
 python -m learning_accelerator.cli --state-file .learning/state.json concept weak "dependency injection"
 python -m learning_accelerator.cli --state-file .learning/state.json review "dependency injection" "解释 Depends 解决的问题" --result incorrect
+python -m learning_accelerator.cli --state-file .learning/state.json task add "每天复习 5 个假名"
 python -m learning_accelerator.cli --state-file .learning/state.json due
 ```
 

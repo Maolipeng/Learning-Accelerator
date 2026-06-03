@@ -68,6 +68,36 @@ def test_cli_profile_accepts_general_learning_background(tmp_path):
     assert state["learner_profile"]["known_skills"] == ["中文写作", "基础拼音"]
 
 
+def test_cli_onboarding_task_and_domain_template(tmp_path, capsys):
+    state_file = tmp_path / "state.json"
+
+    assert main(["--state-file", str(state_file), "init"]) == 0
+    assert main(["--state-file", str(state_file), "onboarding", "--domain", "language"]) == 0
+    assert main([
+        "--state-file",
+        str(state_file),
+        "profile",
+        "--domain",
+        "language",
+        "--goal",
+        "通过日语 N5",
+        "--outcome",
+        "能读写基础假名",
+    ]) == 0
+    assert main(["--state-file", str(state_file), "task", "add", "每天复习 5 个假名"]) == 0
+    assert main(["--state-file", str(state_file), "domain-template", "language"]) == 0
+    assert main(["--state-file", str(state_file), "prompt-context"]) == 0
+
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    assert state["learner_profile"]["target_outcome"] == "能读写基础假名"
+    assert state["practice_state"]["current_tasks"][0]["name"] == "每天复习 5 个假名"
+
+    output = capsys.readouterr().out
+    assert "你想学习什么主题" in output
+    assert '"domain": "language"' in output
+    assert "目标结果：能读写基础假名" in output
+
+
 def test_cli_review_complete_exercise_difficulty_and_context(tmp_path, capsys):
     state_file = tmp_path / "state.json"
 

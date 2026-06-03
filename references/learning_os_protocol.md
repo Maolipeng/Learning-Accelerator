@@ -27,6 +27,7 @@ Use this shape when persistent memory, the bundled `learning_accelerator` JSON s
     "known_skills": [],
     "preferred_language": "zh-CN",
     "learning_goal": "",
+    "target_outcome": "",
     "target_project": "",
     "constraints": [],
     "experience_level": "unknown|no_programming|beginner|intermediate|advanced"
@@ -42,6 +43,7 @@ Use this shape when persistent memory, the bundled `learning_accelerator` JSON s
   "practice_state": {
     "completed_exercises": [],
     "failed_exercises": [],
+    "current_tasks": [],
     "current_project_tasks": [],
     "last_code_errors": []
   },
@@ -157,6 +159,8 @@ Common commands:
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json init
+python -m learning_accelerator.cli --state-file .learning/state.json onboarding --domain language
+python -m learning_accelerator.cli --state-file .learning/state.json domain-template language
 python -m learning_accelerator.cli --state-file .learning/state.json profile --domain language --known-skill "中文拼音" --goal "通过日语 N5"
 python -m learning_accelerator.cli --state-file .learning/state.json show
 python -m learning_accelerator.cli --state-file .learning/state.json summary
@@ -164,6 +168,7 @@ python -m learning_accelerator.cli --state-file .learning/state.json prompt-cont
 python -m learning_accelerator.cli --state-file .learning/state.json concept weak "dependency injection"
 python -m learning_accelerator.cli --state-file .learning/state.json due
 python -m learning_accelerator.cli --state-file .learning/state.json review-complete "<review-id-from-due>" --result correct
+python -m learning_accelerator.cli --state-file .learning/state.json task add "每天复习 5 个假名"
 python -m learning_accelerator.cli --state-file .learning/state.json exercise complete "Build /ask mock API" --concept "FastAPI route"
 ```
 
