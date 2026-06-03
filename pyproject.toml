@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "learning-accelerator"
 version = "1.2.0"
-description = "AI Learning OS skill with JSON persistence and CLI utilities."
+description = "General Learning OS skill with JSON persistence and CLI utilities."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

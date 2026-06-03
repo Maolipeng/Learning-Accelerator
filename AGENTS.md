@@ -1,13 +1,13 @@
 # Learning Accelerator Agent Guide
 
-This repository packages a reusable AI Learning OS for coding agents and general assistant runtimes.
+This repository packages a reusable General Learning OS for coding agents and general assistant runtimes.
 
 ## What To Load
 
 - `SKILL.md`: canonical skill entry for agents that support markdown skills.
 - `SYSTEM_PROMPT.md`: fallback for agents that only support system or developer instructions.
 - `references/learning_os_protocol.md`: state schema and operating protocol for memory, review, practice, debugging, and difficulty adjustment.
-- `examples/`: concrete output examples for concept learning, project learning, CLI persistence, and code-error diagnosis.
+- `examples/`: concrete output examples for concept learning, task learning, CLI persistence, mistake diagnosis, and non-technical learning.
 - `learning_accelerator/`: optional Python JSON state store and CLI.
 
 ## Agent Behavior

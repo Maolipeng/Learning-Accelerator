@@ -19,7 +19,9 @@ SCHEMA_VERSION = 1
 DEFAULT_STATE: dict[str, Any] = {
     "schema_version": SCHEMA_VERSION,
     "learner_profile": {
+        "learning_domain": "general",
         "known_stack": [],
+        "known_skills": [],
         "preferred_language": "zh-CN",
         "experience_level": "unknown",
         "learning_goal": "",
@@ -172,7 +174,9 @@ class JsonStateStore:
     def update_profile(
         self,
         *,
+        learning_domain: str | None = None,
         known_stack: list[str] | None = None,
+        known_skills: list[str] | None = None,
         preferred_language: str | None = None,
         experience_level: str | None = None,
         learning_goal: str | None = None,
@@ -183,8 +187,14 @@ class JsonStateStore:
 
         state = self.load()
         profile = state["learner_profile"]
+        if learning_domain:
+            profile["learning_domain"] = learning_domain
         if known_stack is not None:
             profile["known_stack"] = known_stack
+            if known_skills is None:
+                profile["known_skills"] = known_stack
+        if known_skills is not None:
+            profile["known_skills"] = known_skills
         if preferred_language:
             profile["preferred_language"] = preferred_language
         if experience_level:
@@ -351,6 +361,8 @@ class JsonStateStore:
         practice = state["practice_state"]
         difficulty = state["difficulty_state"]
         return {
+            "learning_domain": profile.get("learning_domain", "general"),
+            "known_skills": profile.get("known_skills", profile.get("known_stack", [])),
             "learning_goal": profile.get("learning_goal", ""),
             "target_project": profile.get("target_project", ""),
             "current_topic": topic.get("current_topic", ""),
@@ -369,12 +381,14 @@ class JsonStateStore:
         summary = self.summary(on_date=on_date)
         due_concepts = [str(item.get("concept", "")) for item in summary["due_reviews"] if item.get("concept")]
         lines = [
+            f"学习领域：{summary['learning_domain'] or 'general'}",
+            f"已知技能：{', '.join(summary['known_skills']) if summary['known_skills'] else '未设置'}",
             f"当前学习目标：{summary['learning_goal'] or '未设置'}",
             f"当前主题：{summary['current_topic'] or '未设置'}",
-            f"目标项目：{summary['target_project'] or '未设置'}",
+            f"目标任务/项目：{summary['target_project'] or '未设置'}",
             f"薄弱点：{', '.join(summary['weak_concepts']) if summary['weak_concepts'] else '无'}",
             f"今天需要复习：{', '.join(due_concepts) if due_concepts else '无'}",
-            f"下一步项目任务：{', '.join(summary['current_project_tasks']) if summary['current_project_tasks'] else '未设置'}",
+            f"下一步任务/项目：{', '.join(summary['current_project_tasks']) if summary['current_project_tasks'] else '未设置'}",
             f"当前难度：{summary['current_difficulty']}，下一步调整：{summary['next_adjustment']}",
         ]
         return "\n".join(lines)
@@ -384,6 +398,12 @@ class JsonStateStore:
         """Apply lightweight in-memory migrations for older state files."""
 
         state["schema_version"] = SCHEMA_VERSION
+        profile = state.get("learner_profile", {})
+        if "known_skills" not in profile:
+            profile["known_skills"] = list(profile.get("known_stack", []))
+        if "learning_domain" not in profile:
+            profile["learning_domain"] = "technology" if profile.get("known_stack") else "general"
+        state["learner_profile"] = profile
         review_state = state.get("review_state", {})
         for key in ("due_items", "next_review_items", "review_history"):
             items = _ensure_list(review_state.get(key), key)

@@ -16,7 +16,10 @@ python -m learning_accelerator.cli --state-file .learning/state.json init
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --domain technology \
   --known-stack JavaScript TypeScript React \
+  --known-skill "React" \
+  --known-skill "TypeScript" \
   --experience-level intermediate \
   --goal "用 FastAPI 构建 AI 工具后端" \
   --project "RAG notebook API" \
@@ -27,8 +30,19 @@ python -m learning_accelerator.cli --state-file .learning/state.json profile \
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --domain general \
   --experience-level no_programming \
   --goal "从零开始学习 Python"
+```
+
+非技术学习也可以记录学习领域和已知技能：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --domain language \
+  --known-skill "中文拼音" \
+  --experience-level beginner \
+  --goal "通过日语 N5"
 ```
 
 ## 设置当前主题

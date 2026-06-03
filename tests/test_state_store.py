@@ -42,6 +42,29 @@ def test_profile_topic_and_concept_updates_are_persisted(tmp_path):
     assert state["topic_state"]["mastered_concepts"] == ["path operation"]
 
 
+def test_profile_supports_general_learning_domain_and_known_skills(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+
+    state = store.update_profile(
+        learning_domain="language",
+        known_skills=["中文写作", "基础拼音"],
+        experience_level="beginner",
+        learning_goal="学习日语",
+        target_project="通过 N5",
+    )
+
+    assert state["learner_profile"]["learning_domain"] == "language"
+    assert state["learner_profile"]["known_skills"] == ["中文写作", "基础拼音"]
+    assert state["learner_profile"]["learning_goal"] == "学习日语"
+
+    summary = store.summary()
+    prompt_context = store.prompt_context()
+    assert summary["learning_domain"] == "language"
+    assert summary["known_skills"] == ["中文写作", "基础拼音"]
+    assert "学习领域：language" in prompt_context
+    assert "已知技能：中文写作, 基础拼音" in prompt_context
+
+
 def test_recording_mastered_concept_removes_it_from_weak_list(tmp_path):
     store = JsonStateStore(tmp_path / "state.json")
 

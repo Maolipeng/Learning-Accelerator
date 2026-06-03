@@ -1,11 +1,11 @@
 ---
-description: Use Learning Accelerator as an AI Learning OS for technical learning, review, practice, and code-error diagnosis.
+description: Use Learning Accelerator as a General Learning OS for learning, review, practice, and mistake diagnosis.
 alwaysApply: false
 ---
 
 # Learning Accelerator
 
-Use this rule when the user asks to learn a technology, review weak concepts, generate exercises, debug learning code, adjust difficulty, or continue a project-driven learning path.
+Use this rule when the user asks to learn any topic, review weak concepts, generate exercises, diagnose mistakes, adjust difficulty, or continue a task-driven learning path.
 
 ## Source Files
 
@@ -29,4 +29,3 @@ python -m learning_accelerator.cli --state-file .learning/state.json due
 ```
 
 6. If persistence is unavailable, include a compact `学习状态` and `状态更新` summary.
-

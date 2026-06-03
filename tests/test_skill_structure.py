@@ -38,6 +38,8 @@ def main():
         ROOT / "docs" / "platforms.md",
         ROOT / "references" / "learning_os_protocol.md",
         ROOT / "examples" / "no_prior_programming_example.md",
+        ROOT / "examples" / "language_learning_example.md",
+        ROOT / "examples" / "non_technical_learning_example.md",
         ROOT / "examples" / "python_function_example.md",
         ROOT / "examples" / "fastapi_example.md",
         ROOT / "examples" / "persistence_cli_example.md",
@@ -64,7 +66,8 @@ def main():
         "Progressive Recall",
         "Review Memory",
         "Spaced Repetition",
-        "Code Error Analysis",
+        "Task-Driven Practice",
+        "analyze mistakes",
         "Adaptive Difficulty",
         "No-Prior-Programming Mapping",
         "Do not assume frontend knowledge",
@@ -72,7 +75,7 @@ def main():
     ])
 
     assert_contains(ROOT / "SYSTEM_PROMPT.md", [
-        "语法",
+        "基础表达",
         "类比",
         "实践",
         "最佳实践",
@@ -80,7 +83,8 @@ def main():
         "回顾",
         "学习状态",
         "间隔重复",
-        "代码错误诊断",
+        "错误诊断",
+        "技术学习只是一个领域",
         "不要默认用户懂前端",
         "小白",
         "列出现有技能",
@@ -109,20 +113,24 @@ def main():
         "CLI tooling",
         "CI workflow",
         "no-prior-programming learner",
+        "language learner",
+        "communication learner",
     ])
 
     assert_contains(ROOT / "references" / "learning_os_protocol.md", [
         "Learning State Schema",
         "Spaced Repetition",
         "Exercise Generation",
-        "Code Error Analysis",
+        "Error Analysis",
         "Difficulty Adjustment",
         "review-complete",
         "prompt-context",
-        "Project-Driven Learning",
+        "Task-Driven Learning",
         "Local JSON Persistence",
         "JsonStateStore",
         "experience_level",
+        "learning_domain",
+        "known_skills",
     ])
 
     assert_contains(ROOT / "examples" / "no_prior_programming_example.md", [
@@ -130,6 +138,22 @@ def main():
         "函数可以理解成",
         "有名字的一组步骤",
         "return",
+        "状态更新",
+    ])
+
+    assert_contains(ROOT / "examples" / "language_learning_example.md", [
+        "日语",
+        "language",
+        "中文拼音",
+        "五个基础平假名",
+        "状态更新",
+    ])
+
+    assert_contains(ROOT / "examples" / "non_technical_learning_example.md", [
+        "公开演讲",
+        "communication",
+        "结构化表达",
+        "评价标准",
         "状态更新",
     ])
 
@@ -214,9 +238,14 @@ def test_cli_and_coverage_configuration():
         "prompt-context",
         "一轮真实学习落盘流程",
         "零编程基础入门",
+        "日语学习",
+        "非技术学习",
+        "General Learning OS",
         "不要求用户预先懂前端或编程",
         "--experience-level no_programming",
-        "先问我目前熟悉哪些技术或工具",
+        "--domain language",
+        "--known-skill",
+        "先问我目前熟悉哪些技能或工具",
         "AGENTS.md",
         "CLAUDE.md",
         "GEMINI.md",

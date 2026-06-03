@@ -36,7 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_context.add_argument("--date", help="ISO date for due review filtering, defaults to today.")
 
     profile = subparsers.add_parser("profile", help="Update learner profile fields.")
-    profile.add_argument("--known-stack", nargs="*", help="Known technologies, e.g. JS TS React.")
+    profile.add_argument("--domain", help="Learning domain, e.g. technology, language, exam, writing, fitness.")
+    profile.add_argument("--known-stack", nargs="*", help="Known technologies, kept for compatibility.")
+    profile.add_argument("--known-skill", action="append", default=None, help="Known skill or familiar tool. Can be repeated.")
     profile.add_argument("--language", help="Preferred response language, e.g. zh-CN or en-US.")
     profile.add_argument(
         "--experience-level",
@@ -112,7 +114,9 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "profile":
         _print_json(
             store.update_profile(
+                learning_domain=args.domain,
                 known_stack=args.known_stack,
+                known_skills=args.known_skill,
                 preferred_language=args.language,
                 experience_level=args.experience_level,
                 learning_goal=args.goal,

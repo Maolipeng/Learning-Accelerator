@@ -1,12 +1,12 @@
 # Learning Accelerator for Claude Code
 
-Use this repository as a reusable AI Learning OS inside Claude Code. It can run as a Claude Code skill, a project memory file, or a plain system prompt source.
+Use this repository as a reusable General Learning OS inside Claude Code. It can run as a Claude Code skill, a project memory file, or a plain system prompt source.
 
 ## Primary Entry
 
 - Prefer `SKILL.md` when Claude Code skills are available.
 - Use `SYSTEM_PROMPT.md` when the environment only supports project or session instructions.
-- Load `references/learning_os_protocol.md` when the user asks for learning state, spaced repetition, exercises, code-error diagnosis, project-driven learning, or difficulty adjustment.
+- Load `references/learning_os_protocol.md` when the user asks for learning state, spaced repetition, exercises, mistake diagnosis, task-driven learning, or difficulty adjustment.
 
 ## Claude Code Skill Install
 

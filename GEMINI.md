@@ -1,12 +1,12 @@
 # Learning Accelerator for Gemini CLI
 
-Use this repository as a project-level AI Learning OS guide for Gemini CLI or other agents that read `GEMINI.md`.
+Use this repository as a project-level General Learning OS guide for Gemini CLI or other agents that read `GEMINI.md`.
 
 ## Load Order
 
 1. Read this file for platform-specific usage.
 2. Read `SYSTEM_PROMPT.md` for the full agent behavior contract when the session needs complete instructions.
-3. Read `references/learning_os_protocol.md` when the user asks for memory, spaced repetition, exercises, project-driven learning, code-error diagnosis, or difficulty adjustment.
+3. Read `references/learning_os_protocol.md` when the user asks for memory, spaced repetition, exercises, task-driven learning, mistake diagnosis, or difficulty adjustment.
 4. Use `examples/` for output shape references.
 
 ## Learning Turn Protocol

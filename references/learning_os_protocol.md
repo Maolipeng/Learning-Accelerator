@@ -1,17 +1,17 @@
-# AI Learning OS Protocol
+# General Learning OS Protocol
 
-Load this reference when the user asks for dynamic learning, review memory, spaced repetition, project-driven learning, exercise generation, code-error analysis, or difficulty adjustment.
+Load this reference when the user asks for dynamic learning, review memory, spaced repetition, task-driven learning, exercise generation, mistake analysis, or difficulty adjustment.
 
 ## Operating Modes
 
 Classify each turn into one primary mode:
 
-- `onboarding`: discover goals, background, constraints, and target project.
-- `concept`: teach one concept with analogy, demo, engineering use, pitfalls, and recall.
-- `project`: guide a concrete project step and tie it back to concepts.
+- `onboarding`: discover goals, learning domain, background, known skills, constraints, and target task/project.
+- `concept`: teach one concept with analogy, demo or example, practical use, pitfalls, and recall.
+- `project`: guide a concrete task or project step and tie it back to concepts.
 - `practice`: generate exercises or evaluate the user's answer.
 - `review`: run spaced repetition and memory recall.
-- `debug`: analyze code, logs, test failures, or wrong answers.
+- `debug`: analyze code, logs, test failures, wrong answers, drafts, attempts, or other learning mistakes.
 - `calibration`: adjust difficulty based on observed performance.
 
 ## Learning State Schema
@@ -22,7 +22,9 @@ Use this shape when persistent memory, the bundled `learning_accelerator` JSON s
 {
   "schema_version": 1,
   "learner_profile": {
+    "learning_domain": "general|technology|language|exam|writing|communication|fitness|finance|custom",
     "known_stack": [],
+    "known_skills": [],
     "preferred_language": "zh-CN",
     "learning_goal": "",
     "target_project": "",
@@ -81,7 +83,7 @@ Do not ask the user to review everything. Select 2-5 high-value items:
 
 - recently learned core concepts,
 - repeated mistakes,
-- concepts required by the next project step,
+- concepts required by the next task or project step,
 - concepts the user could not explain back.
 
 ## Exercise Generation
@@ -101,9 +103,9 @@ Use three levels:
 - `normal`: combine the concept with one familiar idea.
 - `stretch`: apply it in a realistic project-like scenario.
 
-## Code Error Analysis
+## Error Analysis
 
-When the user provides code, logs, or a failing test:
+When the user provides code, logs, a failing test, a wrong answer, a draft, a recording summary, or a failed attempt:
 
 1. Reproduce the likely failure path from the provided evidence.
 2. Identify the root cause, not only the surface error.
@@ -134,11 +136,11 @@ Useful evidence signals include:
 - `explain_fuzzy`
 - `setup_failed`
 
-## Project-Driven Learning
+## Task-Driven Learning
 
-Prefer learning through a small project when the topic is engineering-oriented. A good project task:
+Prefer learning through a small concrete task. For engineering topics this may be a runnable project; for non-technical topics it may be a drill, worksheet, writing revision, speaking practice, mock exam question, or habit log. A good task:
 
-- is runnable or inspectable,
+- is runnable, inspectable, answerable, or observable,
 - touches only one or two new concepts at a time,
 - has clear acceptance criteria,
 - produces an artifact the user can extend,
@@ -155,6 +157,7 @@ Common commands:
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json init
+python -m learning_accelerator.cli --state-file .learning/state.json profile --domain language --known-skill "中文拼音" --goal "通过日语 N5"
 python -m learning_accelerator.cli --state-file .learning/state.json show
 python -m learning_accelerator.cli --state-file .learning/state.json summary
 python -m learning_accelerator.cli --state-file .learning/state.json prompt-context

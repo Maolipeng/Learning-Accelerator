@@ -42,6 +42,32 @@ def test_cli_profile_topic_review_and_due(tmp_path, capsys):
     assert state["learner_profile"]["experience_level"] == "intermediate"
 
 
+def test_cli_profile_accepts_general_learning_background(tmp_path):
+    state_file = tmp_path / "state.json"
+
+    assert main(["--state-file", str(state_file), "init"]) == 0
+    assert main([
+        "--state-file",
+        str(state_file),
+        "profile",
+        "--domain",
+        "language",
+        "--known-skill",
+        "中文写作",
+        "--known-skill",
+        "基础拼音",
+        "--experience-level",
+        "beginner",
+        "--goal",
+        "学习日语",
+    ]) == 0
+    assert main(["--state-file", str(state_file), "summary"]) == 0
+
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    assert state["learner_profile"]["learning_domain"] == "language"
+    assert state["learner_profile"]["known_skills"] == ["中文写作", "基础拼音"]
+
+
 def test_cli_review_complete_exercise_difficulty_and_context(tmp_path, capsys):
     state_file = tmp_path / "state.json"
 

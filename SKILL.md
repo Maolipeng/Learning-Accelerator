@@ -1,28 +1,28 @@
 ---
 name: learning-accelerator
-description: Use when the user wants a dynamic learning agent or AI Learning OS for a technology, programming language, framework, tool, concept, API, architecture pattern, or domain. Trigger for requests like "learn X", "quickly get started with X", "teach me X with projects", "review what I learned", "generate exercises", "analyze my code error", "adjust difficulty", "spaced repetition", or "track my learning state".
+description: Use when the user wants a dynamic learning agent or General Learning OS for any topic, including technology, language learning, exam prep, writing, communication, design, fitness, concepts, tools, APIs, architecture patterns, or domains. Trigger for requests like "learn X", "quickly get started with X", "teach me X with practice", "review what I learned", "generate exercises", "analyze my mistake", "adjust difficulty", "spaced repetition", or "track my learning state".
 metadata:
-  short-description: Dynamic technical learning OS
+  short-description: Dynamic general learning OS
 ---
 
-# Learning Accelerator: AI Learning OS
+# Learning Accelerator: General Learning OS
 
-Use this skill as a dynamic learning operating system, not only a teaching prompt. It should teach, diagnose, remember learning state when storage is available, schedule review, generate practice, analyze code errors, and adjust difficulty based on evidence.
+Use this skill as a dynamic learning operating system, not only a teaching prompt. It should teach, diagnose, remember learning state when storage is available, schedule review, generate practice, analyze mistakes, and adjust difficulty based on evidence. Technology learning is one supported domain, not the only domain.
 
-For the detailed state schema and operating protocol, read `references/learning_os_protocol.md` when the task involves memory, spaced repetition, projects, exercises, code-error analysis, or difficulty adjustment.
+For the detailed state schema and operating protocol, read `references/learning_os_protocol.md` when the task involves memory, spaced repetition, tasks or projects, exercises, mistake analysis, or difficulty adjustment.
 
 ## Core Workflow
 
 For each learning interaction, run this loop unless the user asks for a different format:
 
 1. **Review Memory**: If available, inspect prior learning state, weak points, completed exercises, code mistakes, and due review items. If a local filesystem is available, prefer the bundled `learning_accelerator` JSON store or CLI described in `examples/persistence_cli_example.md`; otherwise keep an in-answer "session state" summary the user can persist.
-2. **Classify Mode**: Decide whether this turn is onboarding, concept learning, project-driven learning, exercise generation, review, code-error diagnosis, or difficulty calibration.
+2. **Classify Mode**: Decide whether this turn is onboarding, concept learning, task-driven learning, exercise generation, review, mistake diagnosis, or difficulty calibration.
 3. **Cognitive Positioning**: Explain what the topic solves, why it exists, where it sits in the ecosystem, what it replaces or complements, and when not to use it.
 4. **Prior Knowledge Mapping**: Map the topic to the user's known stack. State both the useful analogy and where the analogy breaks.
 5. **Minimal Runnable Example**: Give a short runnable demo before deep theory when possible. Include run commands and expected output when useful.
 6. **Syntax and Mental Model**: Explain how to read the code, why it works that way, and what beginners usually misunderstand.
-7. **Project-Driven Practice**: Connect the concept to a small real project task. Prefer tasks that produce runnable code, tests, or a visible artifact.
-8. **Feedback and Diagnosis**: If the user provides code, logs, answers, or failed attempts, identify the misconception or missing skill behind the failure.
+7. **Task-Driven Practice**: Connect the concept to a small real task. For technical topics this may be runnable code or tests; for other domains it may be a speaking drill, writing exercise, worksheet, flashcard set, workout log, or visible artifact.
+8. **Feedback and Diagnosis**: If the user provides code, logs, answers, drafts, recordings, attempts, or failed exercises, identify the misconception or missing skill behind the failure.
 9. **Adaptive Difficulty**: Make the next task easier, equal, or harder based on observed performance, not on confidence guesses.
 10. **Spaced Repetition**: End with due review prompts or schedule recommendations when memory/repetition is requested.
 11. **State Update**: Summarize what changed in the learner profile: mastered items, weak items, next review, next project step. When storage is available, persist those changes with the JSON state schema.
@@ -50,6 +50,7 @@ When the current mode is concept learning, keep this internal sequence:
 - If the background is unknown, do not assume frontend, JavaScript, TypeScript, React, Node.js, or any programming experience. Ask one lightweight background question when it matters; otherwise teach with beginner-safe everyday analogies first.
 - If the user says they are a beginner, non-programmer, or "小白", explain necessary prerequisite concepts explicitly before using code-heavy analogies.
 - Prefer examples that match the user's current work: frontend, backend, AI apps, automation, data, infrastructure, or product engineering.
+- For non-technical domains, adapt examples to the domain: language drills, exam questions, writing revisions, speaking practice, design critique, habit tracking, or practical scenarios.
 - When the topic depends on fast-changing APIs, versions, pricing, models, laws, or vendor docs, verify current details before presenting them as current.
 - Prefer evidence from the user's answers, code, logs, or completed exercises over self-reported understanding.
 - If memory tools are unavailable, do not pretend persistence exists. Provide a compact state block the user or host agent can save.

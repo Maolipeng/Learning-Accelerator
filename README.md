@@ -1,8 +1,8 @@
-# Learning Accelerator: AI Learning OS
+# Learning Accelerator: General Learning OS
 
-这是一个可复用的动态学习 Agent Skill。它不只是讲解模板，而是一个轻量 AI Learning OS：负责学习状态、复盘、间隔重复、项目驱动学习、练习生成、回顾问题生成、代码错误分析和难度自适应。
+这是一个可复用的通用动态学习 Agent Skill。它不只是讲解模板，而是一个轻量 General Learning OS：负责学习状态、复盘、间隔重复、任务驱动学习、练习生成、回顾问题生成、错误诊断和难度自适应。
 
-它适合用来学习新语言、新框架、新工具、新技术，比如：
+它适合用来学习任何需要持续练习和复盘的主题。技术学习只是其中一个领域，比如：
 
 - Python
 - FastAPI
@@ -15,11 +15,19 @@
 - LangChain
 - Pydantic
 
-它不要求用户预先懂前端或编程。用户可以是零基础、小白、非程序员，也可以是前端、后端、数据、运维、产品技术或 AI 应用开发者；系统会先根据背景选择合适的类比和难度。
+也可以用于非技术学习，比如：
+
+- 英语、日语、法语等语言学习
+- 数学、物理、历史、心理学等学科
+- 写作、演讲、沟通、设计、摄影
+- 财务、法律常识、产品管理
+- 健身、营养、考试备考
+
+它不要求用户预先懂前端或编程。用户可以是零基础、小白、非程序员，也可以是前端、后端、数据、运维、产品技术或 AI 应用开发者；系统会先询问当前技能和背景，再选择合适的类比、练习和难度。
 
 核心思想：
 
-> 不只是看懂语法，而是通过“状态记录 + 类比 + 实践 + 项目 + 复习 + 错误诊断 + 难度调整”建立可持续学习闭环。
+> 不只是看懂知识点，而是通过“状态记录 + 类比 + 实践 + 任务 + 复习 + 错误诊断 + 难度调整”建立可持续学习闭环。
 
 ## 文件说明
 
@@ -46,6 +54,8 @@
 │   └── learning_os_protocol.md # 学习状态、复习、练习、错误诊断协议
 ├── examples/
 │   ├── no_prior_programming_example.md
+│   ├── language_learning_example.md
+│   ├── non_technical_learning_example.md
 │   ├── python_function_example.md
 │   ├── fastapi_example.md
 │   ├── persistence_cli_example.md
@@ -87,7 +97,7 @@ cp -R Learning-Accelerator ~/.codex/skills/learning-accelerator
 安装后，在 Codex 里可以这样触发：
 
 ```text
-调用 learning-accelerator，带我学习 FastAPI dependency injection。先问我目前熟悉哪些技术或工具，再根据我的背景讲清楚它解决什么问题，最后给我一个小练习并安排复习。
+调用 learning-accelerator，带我学习 FastAPI dependency injection。先问我目前熟悉哪些技能或工具，再根据我的背景讲清楚它解决什么问题，最后给我一个小练习并安排复习。
 ```
 
 Claude Code:
@@ -142,7 +152,7 @@ Cursor 使用示例：
 通用 coding agent 使用示例：
 
 ```text
-请先读取 AGENTS.md，把这个仓库当成 Learning Accelerator。开始前先问我熟悉哪些技术、工具和概念；我要用项目驱动方式学习 asyncio，每轮都记录薄弱点、练习结果和下次复习项。
+请先读取 AGENTS.md，把这个仓库当成 Learning Accelerator。开始前先问我熟悉哪些技能、工具和概念；我要用任务驱动方式学习 asyncio，每轮都记录薄弱点、练习结果和下次复习项。
 ```
 
 ### 方式三：使用本地持久化和 CLI
@@ -159,7 +169,10 @@ python -m learning_accelerator.cli --state-file .learning/state.json init
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --domain technology \
   --known-stack JavaScript TypeScript React \
+  --known-skill "React" \
+  --known-skill "TypeScript" \
   --experience-level intermediate \
   --goal "学习 FastAPI 并构建 AI API" \
   --project "RAG notebook API"
@@ -169,8 +182,19 @@ python -m learning_accelerator.cli --state-file .learning/state.json profile \
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --domain general \
   --experience-level no_programming \
   --goal "从零开始学习 Python"
+```
+
+非技术学习也可以这样记录：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --domain language \
+  --known-skill "中文拼音" \
+  --experience-level beginner \
+  --goal "通过日语 N5"
 ```
 
 设置主题、记录薄弱点并安排复习：
@@ -237,7 +261,7 @@ learning-accelerator --state-file .learning/state.json show
 每次学习新主题时，输入：
 
 ```text
-调用 Learning Accelerator Skill，作为 AI Learning OS 带我学习 Python async/await：记录状态、安排复习、生成练习，并根据我的代码错误调整难度。
+调用 Learning Accelerator Skill，作为 General Learning OS 带我学习 Python async/await：记录状态、安排复习、生成练习，并根据我的错误调整难度。
 ```
 
 ## 示例场景
@@ -246,6 +270,10 @@ learning-accelerator --state-file .learning/state.json show
 
 - 零编程基础入门：`examples/no_prior_programming_example.md`
   - 输入示例：`调用 Learning Accelerator Skill。我完全没有编程基础，带我学习 Python 函数。`
+- 日语学习：`examples/language_learning_example.md`
+  - 输入示例：`调用 Learning Accelerator Skill。我想学日语，目标是通过 N5。我会中文拼音。`
+- 非技术学习：`examples/non_technical_learning_example.md`
+  - 输入示例：`调用 Learning Accelerator Skill。我想提升公开演讲能力，平时不写代码，也没有技术背景。`
 - Python 函数学习：`examples/python_function_example.md`
   - 输入示例：`调用 Learning Accelerator Skill，带我学习 Python 函数，类比 JS 函数讲。`
 - FastAPI 入门：`examples/fastapi_example.md`
