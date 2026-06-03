@@ -44,6 +44,7 @@
 ├── agents/
 │   └── openai.yaml           # OpenAI/Codex 侧 UI 元数据
 ├── docs/
+│   ├── install.md            # 推荐安装方式和本地开发安装
 │   └── platforms.md          # Codex/Claude/Cursor/Gemini/通用 Agent 适配矩阵
 ├── manifest.json             # 通用安装/兼容性元数据
 ├── learning_accelerator/      # JSON 持久化实现和 CLI 工具
@@ -74,24 +75,46 @@
 
 ### 方式一：作为 Skill 安装
 
-把本仓库复制到目标 Agent 的 skills 目录，确保平台能读取 `SKILL.md`。
+仓库根目录就是 Skill root，因为 `SKILL.md` 位于根目录。发布到 GitHub 后，推荐直接让 Codex 的 skill-installer 从 GitHub 安装，而不是先 clone 再手动复制。
 
-Codex:
+Codex 推荐安装方式：
 
-如果你在本仓库根目录执行，推荐只复制 Skill 运行需要的文件，避免把 `.git`、本地缓存和临时状态一起带过去：
+```text
+Use skill-installer to install the Learning-Accelerator skill from https://github.com/<owner>/Learning-Accelerator.
+```
+
+如果 Skill 不在仓库根目录，而是在某个子目录，也可以给 tree URL：
+
+```text
+Use skill-installer to install the Learning-Accelerator skill from https://github.com/<owner>/<repo>/tree/main/<path-to-skill>.
+```
+
+安装后重启 Codex，让新 skill 生效。
+
+公开生态安装方式：
+
+如果项目已经发布到 skills.sh，可以用 Skills CLI 搜索和安装：
+
+```bash
+npx skills find learning accelerator
+npx skills add <owner>/Learning-Accelerator
+```
+
+对应的目录页通常是：
+
+```text
+https://skills.sh/<owner>/Learning-Accelerator
+```
+
+当前如果 `npx skills find learning accelerator` 还搜不到，说明项目尚未被 skills.sh 收录；这时优先使用上面的 GitHub URL 安装方式。
+
+本地开发安装才需要手动复制：
 
 ```bash
 rm -rf ~/.codex/skills/learning-accelerator
 mkdir -p ~/.codex/skills/learning-accelerator
-cp -R SKILL.md SYSTEM_PROMPT.md README.md manifest.json agents examples references learning_accelerator pyproject.toml \
+cp -R SKILL.md SYSTEM_PROMPT.md README.md manifest.json AGENTS.md CLAUDE.md GEMINI.md agents examples references learning_accelerator pyproject.toml docs \
   ~/.codex/skills/learning-accelerator/
-```
-
-如果你在本仓库的父目录执行，也可以复制当前项目目录名：
-
-```bash
-rm -rf ~/.codex/skills/learning-accelerator
-cp -R Learning-Accelerator ~/.codex/skills/learning-accelerator
 ```
 
 安装后，在 Codex 里可以这样触发：
@@ -136,6 +159,8 @@ Cursor 使用示例：
 ```text
 按 Learning Accelerator 规则分析我这个 FastAPI 报错，指出缺失概念，给最小修复和一个针对性练习。
 ```
+
+完整安装说明见 `docs/install.md`。
 
 ### 方式二：作为通用 coding agent 入口
 

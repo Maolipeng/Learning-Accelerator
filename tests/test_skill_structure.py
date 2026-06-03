@@ -35,6 +35,7 @@ def main():
         ROOT / "README.md",
         ROOT / "manifest.json",
         ROOT / "agents" / "openai.yaml",
+        ROOT / "docs" / "install.md",
         ROOT / "docs" / "platforms.md",
         ROOT / "references" / "learning_os_protocol.md",
         ROOT / "examples" / "no_prior_programming_example.md",
@@ -115,6 +116,15 @@ def main():
         "no-prior-programming learner",
         "language learner",
         "communication learner",
+        "skill-installer",
+        "skills_sh",
+        "as_skills_sh",
+        "npx skills find",
+        "npx skills add",
+        "distribution",
+        "codex_skill_installer",
+        "github_source",
+        "as_codex_local_dev",
     ])
 
     assert_contains(ROOT / "references" / "learning_os_protocol.md", [
@@ -204,6 +214,19 @@ def main():
         "SYSTEM_PROMPT.md",
     ])
 
+    assert_contains(ROOT / "docs" / "install.md", [
+        "Install From GitHub In Codex",
+        "skills.sh",
+        "npx skills find learning accelerator",
+        "npx skills add <owner>/Learning-Accelerator",
+        "Codex `skill-installer` and `npx skills` are complementary",
+        "skill-installer",
+        "Restart Codex",
+        "Local Development Install",
+        "~/.codex/skills/learning-accelerator",
+        "Python CLI",
+    ])
+
     assert not (ROOT / ".DS_Store").exists(), ".DS_Store should not be packaged"
     assert "learning-agent-skill-prompt" not in read_text(ROOT / "README.md")
 
@@ -246,6 +269,12 @@ def test_cli_and_coverage_configuration():
         "日语学习",
         "非技术学习",
         "General Learning OS",
+        "skill-installer",
+        "skills.sh",
+        "npx skills find learning accelerator",
+        "npx skills add <owner>/Learning-Accelerator",
+        "docs/install.md",
+        "安装后重启 Codex",
         "不要求用户预先懂前端或编程",
         "--experience-level no_programming",
         "--domain language",

@@ -16,3 +16,7 @@ venv/
 
 # OS/editor noise
 .DS_Store
+
+docs/community-article.md
+
+.history
