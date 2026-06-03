@@ -20,12 +20,14 @@ Use this shape when persistent memory, the bundled `learning_accelerator` JSON s
 
 ```json
 {
+  "schema_version": 1,
   "learner_profile": {
-    "known_stack": ["JavaScript", "TypeScript", "React"],
+    "known_stack": [],
     "preferred_language": "zh-CN",
     "learning_goal": "",
     "target_project": "",
-    "constraints": []
+    "constraints": [],
+    "experience_level": "unknown|no_programming|beginner|intermediate|advanced"
   },
   "topic_state": {
     "current_topic": "",
@@ -42,7 +44,17 @@ Use this shape when persistent memory, the bundled `learning_accelerator` JSON s
     "last_code_errors": []
   },
   "review_state": {
-    "due_items": [],
+    "due_items": [
+      {
+        "id": "stable-review-id",
+        "concept": "",
+        "prompt": "",
+        "source": "manual",
+        "result": "incorrect|fuzzy|correct|second_correct|third_correct",
+        "created_at": "YYYY-MM-DD",
+        "due_at": "YYYY-MM-DD"
+      }
+    ],
     "review_history": [],
     "next_review_items": []
   },
@@ -62,6 +74,8 @@ Use short intervals for new or weak concepts. A simple default is:
 - Second correct recall: review after 3 days.
 - Third correct recall: review after 7 days.
 - Incorrect or fuzzy recall: review again in the current session and keep it in weak concepts.
+
+Review items should have stable `id` values derived from concept and prompt. When the same concept/prompt pair is scheduled again, update the existing pending review instead of appending a duplicate. When the user completes a review, move the attempt into `review_history`; optionally schedule the next interval based on the result.
 
 Do not ask the user to review everything. Select 2-5 high-value items:
 
@@ -110,6 +124,16 @@ Adjust difficulty using observed signals:
 
 Do not make difficulty changes based only on the user's confidence.
 
+Useful evidence signals include:
+
+- `exercise_completed`
+- `exercise_failed`
+- `recall_correct`
+- `recall_incorrect`
+- `explain_correct`
+- `explain_fuzzy`
+- `setup_failed`
+
 ## Project-Driven Learning
 
 Prefer learning through a small project when the topic is engineering-oriented. A good project task:
@@ -132,8 +156,12 @@ Common commands:
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json init
 python -m learning_accelerator.cli --state-file .learning/state.json show
+python -m learning_accelerator.cli --state-file .learning/state.json summary
+python -m learning_accelerator.cli --state-file .learning/state.json prompt-context
 python -m learning_accelerator.cli --state-file .learning/state.json concept weak "dependency injection"
 python -m learning_accelerator.cli --state-file .learning/state.json due
+python -m learning_accelerator.cli --state-file .learning/state.json review-complete "<review-id-from-due>" --result correct
+python -m learning_accelerator.cli --state-file .learning/state.json exercise complete "Build /ask mock API" --concept "FastAPI route"
 ```
 
 The CLI stores the same schema documented above, so agents can either call the CLI or read/write JSON directly through the `JsonStateStore` API.

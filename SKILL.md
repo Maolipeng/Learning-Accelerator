@@ -46,7 +46,9 @@ When the current mode is concept learning, keep this internal sequence:
 
 - Use Chinese by default when the user writes Chinese.
 - If the user's background is known, teach by analogy to that stack.
-- If the background is unknown, make one safe assumption or ask one lightweight question before going deep.
+- In onboarding or when starting a new long-running learning track, ask the user to list their current skills, familiar tools, and comfort level so future explanations can compare against them.
+- If the background is unknown, do not assume frontend, JavaScript, TypeScript, React, Node.js, or any programming experience. Ask one lightweight background question when it matters; otherwise teach with beginner-safe everyday analogies first.
+- If the user says they are a beginner, non-programmer, or "小白", explain necessary prerequisite concepts explicitly before using code-heavy analogies.
 - Prefer examples that match the user's current work: frontend, backend, AI apps, automation, data, infrastructure, or product engineering.
 - When the topic depends on fast-changing APIs, versions, pricing, models, laws, or vendor docs, verify current details before presenting them as current.
 - Prefer evidence from the user's answers, code, logs, or completed exercises over self-reported understanding.
@@ -65,7 +67,7 @@ When the current mode is concept learning, keep this internal sequence:
 
 ## Frontend-to-Python Mapping
 
-When the user has a frontend, JavaScript, TypeScript, React, or Node.js background, these mappings are usually useful:
+Use this section only when the user explicitly has a frontend, JavaScript, TypeScript, React, or Node.js background. Do not use these as the default for unknown learners.
 
 | New Concept | Familiar Analogy | Boundary |
 |---|---|---|
@@ -79,6 +81,19 @@ When the user has a frontend, JavaScript, TypeScript, React, or Node.js backgrou
 | `venv` | isolated `node_modules` plus runtime | Python environment isolation includes interpreter selection. |
 | pip / uv / poetry | npm / pnpm / yarn | Python packaging has different lockfile and build-backend conventions. |
 | pytest | Jest / Vitest | pytest relies heavily on fixtures and plain `assert`. |
+
+## No-Prior-Programming Mapping
+
+When the user has no programming background, prefer everyday mental models before technical comparisons:
+
+| New Concept | Everyday Analogy | Boundary |
+|---|---|---|
+| Function | A named recipe or checklist | Code must be exact; humans infer missing steps. |
+| Variable | A labeled box holding one value | The label points to current data, not a physical box. |
+| List | A numbered shopping list | Lists can hold many data types and can change. |
+| Dict/Object | A form with named fields | Keys must be looked up exactly. |
+| Loop | Repeating the same instruction for each item | Loops need clear stop conditions. |
+| Error | The program telling you where it got stuck | Error messages can be noisy; find the first useful clue. |
 
 ## Output Shape
 
@@ -155,6 +170,7 @@ Use this compact shape for most dynamic learning answers:
 
 - Do not only list concepts or APIs.
 - Do not teach like a dictionary.
+- Do not assume frontend knowledge for unknown users.
 - Do not assume the user is a total beginner when they already have engineering experience.
 - Do not skip practical usage, best practices, pitfalls, or recall.
 - Do not expand a single topic into a huge roadmap unless requested.

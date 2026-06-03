@@ -8,11 +8,17 @@ version = "1.2.0"
 description = "AI Learning OS skill with JSON persistence and CLI utilities."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Learning Accelerator Maintainers" }]
 
 [project.scripts]
 learning-accelerator = "learning_accelerator.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[tool.setuptools.packages.find]
+include = ["learning_accelerator*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -17,9 +17,18 @@ python -m learning_accelerator.cli --state-file .learning/state.json init
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json profile \
   --known-stack JavaScript TypeScript React \
+  --experience-level intermediate \
   --goal "用 FastAPI 构建 AI 工具后端" \
   --project "RAG notebook API" \
   --constraint "每天 30 分钟"
+```
+
+如果用户没有编程背景，也可以不填 `known_stack`：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json profile \
+  --experience-level no_programming \
+  --goal "从零开始学习 Python"
 ```
 
 ## 设置当前主题
@@ -50,6 +59,77 @@ python -m learning_accelerator.cli --state-file .learning/state.json review \
 
 ```bash
 python -m learning_accelerator.cli --state-file .learning/state.json due
+```
+
+## 完成并归档复习
+
+`due` 输出里每条复习项都有稳定 `id`。复习完成后，把这次尝试归档到 `review_history`，并按结果安排下一次复习：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json review-complete \
+  "<review-id-from-due>" \
+  --result correct
+```
+
+如果只想归档，不安排下一次复习：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json review-complete \
+  "<review-id-from-due>" \
+  --result correct \
+  --no-reschedule
+```
+
+## 记录练习结果和难度证据
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json exercise complete \
+  "Build /ask mock API" \
+  --concept "FastAPI route" \
+  --concept "Pydantic schema" \
+  --notes "独立完成 route/schema/service 分层"
+
+python -m learning_accelerator.cli --state-file .learning/state.json exercise fail \
+  "Explain dependency injection" \
+  --concept "dependency injection" \
+  --notes "把 Depends 和 middleware 混在一起了"
+
+python -m learning_accelerator.cli --state-file .learning/state.json evidence \
+  explain_correct \
+  "能清楚解释 route 和 service 的边界"
+```
+
+## 给 Agent 读取的摘要
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json summary
+python -m learning_accelerator.cli --state-file .learning/state.json prompt-context
+```
+
+`summary` 输出结构化 JSON，适合程序读取；`prompt-context` 输出一段紧凑文本，适合塞给下一轮 Agent。
+
+## 一轮真实学习如何落盘
+
+```bash
+# 1. Agent 开始前读取上下文
+python -m learning_accelerator.cli --state-file .learning/state.json prompt-context
+
+# 2. 找出今天要复习的内容
+python -m learning_accelerator.cli --state-file .learning/state.json due
+
+# 3. 用户完成复习后归档，并安排下一次复习
+python -m learning_accelerator.cli --state-file .learning/state.json review-complete \
+  "<review-id-from-due>" \
+  --result correct
+
+# 4. 用户完成练习后记录结果
+python -m learning_accelerator.cli --state-file .learning/state.json exercise complete \
+  "Implement a FastAPI mock /ask endpoint" \
+  --concept "FastAPI route" \
+  --notes "能独立跑通请求和响应"
+
+# 5. Agent 结束前输出新的摘要
+python -m learning_accelerator.cli --state-file .learning/state.json summary
 ```
 
 ## Agent 使用方式

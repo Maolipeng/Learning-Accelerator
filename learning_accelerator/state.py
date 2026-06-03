@@ -7,16 +7,21 @@ run in constrained agent environments without dependency installation.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+SCHEMA_VERSION = 1
+
 DEFAULT_STATE: dict[str, Any] = {
+    "schema_version": SCHEMA_VERSION,
     "learner_profile": {
         "known_stack": [],
         "preferred_language": "zh-CN",
+        "experience_level": "unknown",
         "learning_goal": "",
         "target_project": "",
         "constraints": [],
@@ -55,6 +60,9 @@ REVIEW_INTERVALS_BY_RESULT = {
     "fuzzy": 0,
 }
 
+POSITIVE_DIFFICULTY_SIGNALS = {"exercise_completed", "explain_correct", "recall_correct"}
+NEGATIVE_DIFFICULTY_SIGNALS = {"exercise_failed", "recall_incorrect", "explain_fuzzy", "setup_failed"}
+
 
 class LearningStateError(ValueError):
     """Raised when persisted learning-state data is malformed."""
@@ -84,6 +92,20 @@ def _ensure_list(value: Any, field_name: str) -> list[Any]:
     return value
 
 
+def _stable_id(*parts: str) -> str:
+    normalized = "\n".join(part.strip().lower() for part in parts)
+    return hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:12]
+
+
+def _upsert_by_id(items: list[dict[str, Any]], item: dict[str, Any]) -> list[dict[str, Any]]:
+    for index, existing in enumerate(items):
+        if existing.get("id") == item.get("id"):
+            items[index] = {**existing, **item}
+            return items
+    items.append(item)
+    return items
+
+
 def create_review_item(
     concept: str,
     prompt: str,
@@ -99,6 +121,7 @@ def create_review_item(
     base_day = today or date.today()
     due_day = base_day + timedelta(days=REVIEW_INTERVALS_BY_RESULT[result])
     return {
+        "id": _stable_id("review", concept, prompt),
         "concept": concept,
         "prompt": prompt,
         "source": source,
@@ -128,7 +151,7 @@ class JsonStateStore:
             raise LearningStateError(f"Invalid JSON in {self.path}: {exc}") from exc
         if not isinstance(raw, dict):
             raise LearningStateError("Learning state root must be an object")
-        return self.validate(_deep_merge(DEFAULT_STATE, raw))
+        return self.validate(self.migrate(_deep_merge(DEFAULT_STATE, raw)))
 
     def save(self, state: dict[str, Any]) -> dict[str, Any]:
         """Validate and persist state, creating parent directories as needed."""
@@ -151,6 +174,7 @@ class JsonStateStore:
         *,
         known_stack: list[str] | None = None,
         preferred_language: str | None = None,
+        experience_level: str | None = None,
         learning_goal: str | None = None,
         target_project: str | None = None,
         constraint: str | None = None,
@@ -163,6 +187,12 @@ class JsonStateStore:
             profile["known_stack"] = known_stack
         if preferred_language:
             profile["preferred_language"] = preferred_language
+        if experience_level:
+            if experience_level not in {"unknown", "no_programming", "beginner", "intermediate", "advanced"}:
+                raise LearningStateError(
+                    "experience_level must be unknown, no_programming, beginner, intermediate, or advanced"
+                )
+            profile["experience_level"] = experience_level
         if learning_goal is not None:
             profile["learning_goal"] = learning_goal
         if target_project is not None:
@@ -211,8 +241,59 @@ class JsonStateStore:
         state = self.load()
         item = create_review_item(concept, prompt, result=result, source=source)
         next_items = _ensure_list(state["review_state"].get("next_review_items"), "next_review_items")
-        next_items.append(item)
+        next_items = _upsert_by_id(next_items, item)
         state["review_state"]["next_review_items"] = next_items
+        return self.save(state)
+
+    def complete_review(
+        self,
+        review_id: str,
+        *,
+        result: str,
+        reschedule: bool = True,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        """Archive a review attempt and optionally schedule its next interval."""
+
+        if result not in REVIEW_INTERVALS_BY_RESULT:
+            allowed = ", ".join(sorted(REVIEW_INTERVALS_BY_RESULT))
+            raise LearningStateError(f"result must be one of: {allowed}")
+
+        state = self.load()
+        review_state = state["review_state"]
+        due_items = _ensure_list(review_state.get("due_items"), "due_items")
+        next_items = _ensure_list(review_state.get("next_review_items"), "next_review_items")
+        candidates = due_items + next_items
+        matched = next((item for item in candidates if item.get("id") == review_id), None)
+        if matched is None:
+            raise LearningStateError(f"review item not found: {review_id}")
+
+        review_state["due_items"] = [item for item in due_items if item.get("id") != review_id]
+        review_state["next_review_items"] = [item for item in next_items if item.get("id") != review_id]
+
+        completed = {
+            **matched,
+            "completed_result": result,
+            "completed_at": today_iso(),
+        }
+        if notes:
+            completed["notes"] = notes
+        history = _ensure_list(review_state.get("review_history"), "review_history")
+        history.append(completed)
+        review_state["review_history"] = history
+
+        if reschedule:
+            review_state["next_review_items"] = _upsert_by_id(
+                review_state["next_review_items"],
+                create_review_item(
+                    str(matched.get("concept", "")),
+                    str(matched.get("prompt", "")),
+                    result=result,
+                    source=str(matched.get("source", "manual")),
+                ),
+            )
+        self._apply_review_result_to_concepts(state, str(matched.get("concept", "")), result)
+        self._record_evidence_in_state(state, "recall_correct" if result.startswith("correct") else "recall_incorrect", matched.get("prompt", ""))
         return self.save(state)
 
     def due_reviews(self, on_date: str | None = None) -> list[dict[str, Any]]:
@@ -226,6 +307,97 @@ class JsonStateStore:
         candidates.extend(_ensure_list(review_state.get("next_review_items"), "next_review_items"))
         return [item for item in candidates if str(item.get("due_at", "")) <= target]
 
+    def record_exercise(
+        self,
+        name: str,
+        *,
+        status: str,
+        concepts: list[str] | None = None,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        """Record a completed or failed exercise and update difficulty evidence."""
+
+        if status not in {"completed", "failed"}:
+            raise LearningStateError("status must be 'completed' or 'failed'")
+        state = self.load()
+        item = {
+            "id": _stable_id("exercise", name),
+            "name": name,
+            "concepts": concepts or [],
+            "notes": notes,
+            "recorded_at": today_iso(),
+        }
+        key = "completed_exercises" if status == "completed" else "failed_exercises"
+        exercises = _ensure_list(state["practice_state"].get(key), key)
+        exercises = _upsert_by_id(exercises, item)
+        state["practice_state"][key] = exercises
+        signal = "exercise_completed" if status == "completed" else "exercise_failed"
+        self._record_evidence_in_state(state, signal, notes or name)
+        return self.save(state)
+
+    def record_evidence(self, signal: str, detail: str = "", source: str = "manual") -> dict[str, Any]:
+        """Record difficulty evidence and apply the current adjustment."""
+
+        state = self.load()
+        self._record_evidence_in_state(state, signal, detail, source=source)
+        return self.save(state)
+
+    def summary(self, on_date: str | None = None) -> dict[str, Any]:
+        """Return a compact, agent-friendly learning-state summary."""
+
+        state = self.load()
+        profile = state["learner_profile"]
+        topic = state["topic_state"]
+        practice = state["practice_state"]
+        difficulty = state["difficulty_state"]
+        return {
+            "learning_goal": profile.get("learning_goal", ""),
+            "target_project": profile.get("target_project", ""),
+            "current_topic": topic.get("current_topic", ""),
+            "level": topic.get("level", "beginner"),
+            "mastered_concepts": topic.get("mastered_concepts", []),
+            "weak_concepts": topic.get("weak_concepts", []),
+            "due_reviews": self.due_reviews(on_date=on_date),
+            "current_project_tasks": practice.get("current_project_tasks", []),
+            "current_difficulty": difficulty.get("current_difficulty", 1),
+            "next_adjustment": difficulty.get("next_adjustment", "same"),
+        }
+
+    def prompt_context(self, on_date: str | None = None) -> str:
+        """Render summary data as concise prompt context for another agent."""
+
+        summary = self.summary(on_date=on_date)
+        due_concepts = [str(item.get("concept", "")) for item in summary["due_reviews"] if item.get("concept")]
+        lines = [
+            f"当前学习目标：{summary['learning_goal'] or '未设置'}",
+            f"当前主题：{summary['current_topic'] or '未设置'}",
+            f"目标项目：{summary['target_project'] or '未设置'}",
+            f"薄弱点：{', '.join(summary['weak_concepts']) if summary['weak_concepts'] else '无'}",
+            f"今天需要复习：{', '.join(due_concepts) if due_concepts else '无'}",
+            f"下一步项目任务：{', '.join(summary['current_project_tasks']) if summary['current_project_tasks'] else '未设置'}",
+            f"当前难度：{summary['current_difficulty']}，下一步调整：{summary['next_adjustment']}",
+        ]
+        return "\n".join(lines)
+
+    @staticmethod
+    def migrate(state: dict[str, Any]) -> dict[str, Any]:
+        """Apply lightweight in-memory migrations for older state files."""
+
+        state["schema_version"] = SCHEMA_VERSION
+        review_state = state.get("review_state", {})
+        for key in ("due_items", "next_review_items", "review_history"):
+            items = _ensure_list(review_state.get(key), key)
+            for item in items:
+                if isinstance(item, dict) and not item.get("id"):
+                    item["id"] = _stable_id(
+                        "review",
+                        str(item.get("concept", "")),
+                        str(item.get("prompt", "")),
+                    )
+            review_state[key] = items
+        state["review_state"] = review_state
+        return state
+
     @staticmethod
     def validate(state: dict[str, Any]) -> dict[str, Any]:
         """Validate the top-level schema and normalize missing keys."""
@@ -233,7 +405,12 @@ class JsonStateStore:
         if not isinstance(state, dict):
             raise LearningStateError("Learning state must be a dictionary")
         normalized = _deep_merge(DEFAULT_STATE, state)
+        normalized = JsonStateStore.migrate(normalized)
+        if normalized.get("schema_version") != SCHEMA_VERSION:
+            raise LearningStateError(f"schema_version must be {SCHEMA_VERSION}")
         for section in DEFAULT_STATE:
+            if section == "schema_version":
+                continue
             if section not in normalized or not isinstance(normalized[section], dict):
                 raise LearningStateError(f"{section} must be an object")
         topic = normalized["topic_state"]
@@ -243,3 +420,58 @@ class JsonStateStore:
         if not isinstance(difficulty, int) or not 1 <= difficulty <= 5:
             raise LearningStateError("difficulty_state.current_difficulty must be an integer from 1 to 5")
         return normalized
+
+    @staticmethod
+    def _apply_review_result_to_concepts(state: dict[str, Any], concept: str, result: str) -> None:
+        if not concept:
+            return
+        topic = state["topic_state"]
+        weak = _ensure_list(topic.get("weak_concepts"), "weak_concepts")
+        mastered = _ensure_list(topic.get("mastered_concepts"), "mastered_concepts")
+        if result in {"incorrect", "fuzzy"}:
+            if concept not in weak:
+                weak.append(concept)
+            mastered = [item for item in mastered if item != concept]
+        elif result in {"second_correct", "third_correct"}:
+            if concept not in mastered:
+                mastered.append(concept)
+            weak = [item for item in weak if item != concept]
+        topic["weak_concepts"] = weak
+        topic["mastered_concepts"] = mastered
+
+    @staticmethod
+    def _record_evidence_in_state(
+        state: dict[str, Any],
+        signal: str,
+        detail: Any = "",
+        *,
+        source: str = "manual",
+    ) -> None:
+        difficulty = state["difficulty_state"]
+        evidence = _ensure_list(difficulty.get("evidence"), "difficulty_state.evidence")
+        evidence.append({
+            "signal": signal,
+            "detail": str(detail),
+            "source": source,
+            "recorded_at": today_iso(),
+        })
+        difficulty["evidence"] = evidence[-20:]
+        JsonStateStore._adjust_difficulty_in_state(state)
+
+    @staticmethod
+    def _adjust_difficulty_in_state(state: dict[str, Any]) -> None:
+        difficulty = state["difficulty_state"]
+        evidence = _ensure_list(difficulty.get("evidence"), "difficulty_state.evidence")
+        recent = evidence[-2:]
+        positive = sum(1 for item in recent if item.get("signal") in POSITIVE_DIFFICULTY_SIGNALS)
+        negative = sum(1 for item in recent if item.get("signal") in NEGATIVE_DIFFICULTY_SIGNALS)
+        current = difficulty.get("current_difficulty", 1)
+        if positive >= 2:
+            difficulty["next_adjustment"] = "harder"
+            difficulty["current_difficulty"] = min(5, current + 1)
+        elif negative >= 2:
+            difficulty["next_adjustment"] = "easier"
+            difficulty["current_difficulty"] = max(1, current - 1)
+        else:
+            difficulty["next_adjustment"] = "same"
+            difficulty["current_difficulty"] = current

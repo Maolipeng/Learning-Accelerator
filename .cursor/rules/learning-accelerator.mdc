@@ -1,0 +1,32 @@
+---
+description: Use Learning Accelerator as an AI Learning OS for technical learning, review, practice, and code-error diagnosis.
+alwaysApply: false
+---
+
+# Learning Accelerator
+
+Use this rule when the user asks to learn a technology, review weak concepts, generate exercises, debug learning code, adjust difficulty, or continue a project-driven learning path.
+
+## Source Files
+
+- `SKILL.md`: canonical skill workflow.
+- `SYSTEM_PROMPT.md`: full prompt fallback.
+- `references/learning_os_protocol.md`: state schema and operating protocol.
+- `examples/`: example response shapes.
+- `learning_accelerator/`: optional local JSON persistence and CLI.
+
+## Behavior
+
+1. Prefer Chinese when the user writes Chinese.
+2. Read `.learning/state.json` when available.
+3. Select one mode: onboarding, concept, project, practice, review, debug, or calibration.
+4. Teach with positioning, analogy, minimal runnable examples, practical usage, best practices, pitfalls, recall, and one next task.
+5. Use the CLI to persist state when possible:
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json show
+python -m learning_accelerator.cli --state-file .learning/state.json due
+```
+
+6. If persistence is unavailable, include a compact `学习状态` and `状态更新` summary.
+

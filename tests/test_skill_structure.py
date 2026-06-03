@@ -26,12 +26,18 @@ def assert_skill_frontmatter():
 
 def main():
     required_files = [
+        ROOT / "AGENTS.md",
+        ROOT / "CLAUDE.md",
+        ROOT / "GEMINI.md",
         ROOT / "SKILL.md",
         ROOT / "SYSTEM_PROMPT.md",
+        ROOT / ".cursor" / "rules" / "learning-accelerator.mdc",
         ROOT / "README.md",
         ROOT / "manifest.json",
         ROOT / "agents" / "openai.yaml",
+        ROOT / "docs" / "platforms.md",
         ROOT / "references" / "learning_os_protocol.md",
+        ROOT / "examples" / "no_prior_programming_example.md",
         ROOT / "examples" / "python_function_example.md",
         ROOT / "examples" / "fastapi_example.md",
         ROOT / "examples" / "persistence_cli_example.md",
@@ -60,6 +66,9 @@ def main():
         "Spaced Repetition",
         "Code Error Analysis",
         "Adaptive Difficulty",
+        "No-Prior-Programming Mapping",
+        "Do not assume frontend knowledge",
+        "list their current skills",
     ])
 
     assert_contains(ROOT / "SYSTEM_PROMPT.md", [
@@ -72,6 +81,9 @@ def main():
         "学习状态",
         "间隔重复",
         "代码错误诊断",
+        "不要默认用户懂前端",
+        "小白",
+        "列出现有技能",
     ])
 
     assert_contains(ROOT / "agents" / "openai.yaml", [
@@ -84,12 +96,19 @@ def main():
     assert_contains(ROOT / "manifest.json", [
         "compatible_with",
         "Codex skills",
+        "Claude Code skills",
+        "Cursor rules",
+        "Gemini CLI project guides",
+        "AGENTS.md-compatible coding agents",
         "system-prompt based agents",
         "spaced repetition",
         "adaptive difficulty",
+        "review completion and archival",
+        "prompt-context export",
         "local JSON persistence",
         "CLI tooling",
         "CI workflow",
+        "no-prior-programming learner",
     ])
 
     assert_contains(ROOT / "references" / "learning_os_protocol.md", [
@@ -98,9 +117,62 @@ def main():
         "Exercise Generation",
         "Code Error Analysis",
         "Difficulty Adjustment",
+        "review-complete",
+        "prompt-context",
         "Project-Driven Learning",
         "Local JSON Persistence",
         "JsonStateStore",
+        "experience_level",
+    ])
+
+    assert_contains(ROOT / "examples" / "no_prior_programming_example.md", [
+        "零编程基础",
+        "函数可以理解成",
+        "有名字的一组步骤",
+        "return",
+        "状态更新",
+    ])
+
+    assert_contains(ROOT / "AGENTS.md", [
+        "SKILL.md",
+        "SYSTEM_PROMPT.md",
+        "learning_os_protocol.md",
+        "learning_accelerator.cli",
+        "Claude Code",
+    ])
+
+    assert_contains(ROOT / "CLAUDE.md", [
+        "Claude Code",
+        "SKILL.md",
+        "SYSTEM_PROMPT.md",
+        "learning_os_protocol.md",
+        "learning_accelerator.cli",
+        "~/.claude/skills/learning-accelerator",
+    ])
+
+    assert_contains(ROOT / "GEMINI.md", [
+        "Gemini CLI",
+        "SYSTEM_PROMPT.md",
+        "learning_os_protocol.md",
+        "learning_accelerator.cli",
+        ".learning/state.json",
+    ])
+
+    assert_contains(ROOT / ".cursor" / "rules" / "learning-accelerator.mdc", [
+        "alwaysApply: false",
+        "SKILL.md",
+        "SYSTEM_PROMPT.md",
+        "learning_os_protocol.md",
+        "learning_accelerator.cli",
+    ])
+
+    assert_contains(ROOT / "docs" / "platforms.md", [
+        "Codex",
+        "Claude Code",
+        "Cursor",
+        "Gemini CLI",
+        "AGENTS.md",
+        "SYSTEM_PROMPT.md",
     ])
 
     assert not (ROOT / ".DS_Store").exists(), ".DS_Store should not be packaged"
@@ -116,6 +188,10 @@ def test_cli_and_coverage_configuration():
     assert_contains(ROOT / "pyproject.toml", [
         "learning-accelerator",
         "pytest",
+        "pytest-cov",
+        "optional-dependencies",
+        "tool.setuptools.packages.find",
+        "learning_accelerator*",
         "fail_under",
     ])
     assert_contains(ROOT / ".gitignore", [
@@ -134,6 +210,21 @@ def test_cli_and_coverage_configuration():
         "本地持久化",
         "learning_accelerator.cli",
         "Learning-Accelerator",
+        "review-complete",
+        "prompt-context",
+        "一轮真实学习落盘流程",
+        "零编程基础入门",
+        "不要求用户预先懂前端或编程",
+        "--experience-level no_programming",
+        "先问我目前熟悉哪些技术或工具",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "GEMINI.md",
+        ".cursor/rules/learning-accelerator.mdc",
+        "docs/platforms.md",
+        "~/.claude/skills/learning-accelerator",
+        "python -m pip install -e \".[dev]\"",
+        "python -m pip install --upgrade pip",
         "python -m pip install -e .",
         "本地测试和覆盖率",
         ".github/workflows/ci.yml",
