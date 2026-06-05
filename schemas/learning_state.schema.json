@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/learning-accelerator/learning_state.schema.json",
+  "title": "Learning Accelerator State",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "learner_profile",
+    "topic_state",
+    "practice_state",
+    "review_state",
+    "difficulty_state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "learner_profile": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "learning_domain": { "type": "string" },
+        "known_stack": { "type": "array", "items": { "type": "string" } },
+        "known_skills": { "type": "array", "items": { "type": "string" } },
+        "preferred_language": { "type": "string" },
+        "experience_level": {
+          "type": "string",
+          "enum": ["unknown", "no_programming", "beginner", "intermediate", "advanced"]
+        },
+        "learning_goal": { "type": "string" },
+        "target_outcome": { "type": "string" },
+        "target_project": { "type": "string" },
+        "constraints": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "topic_state": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "current_topic": { "type": "string" },
+        "level": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"]
+        },
+        "mastered_concepts": { "type": "array", "items": { "type": "string" } },
+        "weak_concepts": { "type": "array", "items": { "type": "string" } },
+        "concept_progress": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/concept_progress"
+          }
+        },
+        "misconceptions": { "type": "array", "items": { "type": "string" } },
+        "open_questions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "practice_state": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "exercise_specs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/exercise_spec" }
+        },
+        "attempt_records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attempt_record" }
+        },
+        "completed_exercises": { "type": "array", "items": { "type": "object" } },
+        "failed_exercises": { "type": "array", "items": { "type": "object" } },
+        "current_tasks": { "type": "array", "items": { "type": "object" } },
+        "current_project_tasks": { "type": "array", "items": { "type": "string" } },
+        "last_code_errors": { "type": "array" }
+      }
+    },
+    "review_state": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "due_items": { "type": "array", "items": { "$ref": "#/$defs/review_item" } },
+        "review_history": { "type": "array", "items": { "type": "object" } },
+        "next_review_items": { "type": "array", "items": { "$ref": "#/$defs/review_item" } }
+      }
+    },
+    "difficulty_state": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "current_difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "evidence": { "type": "array", "items": { "type": "object" } },
+        "next_adjustment": {
+          "type": "string",
+          "enum": ["easier", "same", "harder"]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "concept_progress": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["concept", "strength", "attempts", "correct_streak", "last_reviewed_at", "next_due_at", "failure_count"],
+      "properties": {
+        "concept": { "type": "string" },
+        "strength": { "type": "number", "minimum": 0, "maximum": 1 },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "correct_streak": { "type": "integer", "minimum": 0 },
+        "last_reviewed_at": { "type": "string" },
+        "next_due_at": { "type": "string" },
+        "failure_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "exercise_spec": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "topic", "concepts", "difficulty", "goal", "task", "created_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "topic": { "type": "string" },
+        "concepts": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "difficulty": { "type": "string", "enum": ["easy", "normal", "stretch"] },
+        "goal": { "type": "string" },
+        "task": { "type": "string", "minLength": 1 },
+        "input": { "type": "string" },
+        "expected_output": { "type": "string" },
+        "constraints": { "type": "array", "items": { "type": "string" } },
+        "evaluation_criteria": { "type": "array", "items": { "type": "string" } },
+        "hint": { "type": "string" },
+        "created_at": { "type": "string" }
+      }
+    },
+    "attempt_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "exercise_id", "user_answer", "result", "score", "created_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "exercise_id": { "type": "string" },
+        "user_answer": { "type": "string" },
+        "result": { "type": "string", "enum": ["pass", "partial", "fail"] },
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "mistake_type": { "type": "string" },
+        "feedback": { "type": "string" },
+        "concepts_to_review": { "type": "array", "items": { "type": "string" } },
+        "created_at": { "type": "string" }
+      }
+    },
+    "review_item": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "concept", "prompt", "result", "created_at", "due_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "concept": { "type": "string" },
+        "prompt": { "type": "string" },
+        "source": { "type": "string" },
+        "result": {
+          "type": "string",
+          "enum": ["incorrect", "fuzzy", "correct", "second_correct", "third_correct"]
+        },
+        "created_at": { "type": "string" },
+        "due_at": { "type": "string" }
+      }
+    }
+  }
+}

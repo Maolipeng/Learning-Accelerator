@@ -5,6 +5,15 @@ import json
 from learning_accelerator.cli import main
 
 
+def test_cli_version_prints_package_and_schema_version(capsys):
+    assert main(["version"]) == 0
+
+    version = json.loads(capsys.readouterr().out)
+    assert version["name"] == "learning-accelerator"
+    assert version["version"] == "1.6.0"
+    assert version["schema_version"] == 1
+
+
 def test_cli_profile_topic_review_and_due(tmp_path, capsys):
     state_file = tmp_path / "state.json"
 
@@ -153,3 +162,122 @@ def test_cli_review_complete_exercise_difficulty_and_context(tmp_path, capsys):
     output = capsys.readouterr().out
     assert '"learning_goal": "Learn FastAPI"' in output
     assert "当前学习目标：Learn FastAPI" in output
+
+
+def test_cli_structured_exercise_and_attempt_flow(tmp_path, capsys):
+    state_file = tmp_path / "state.json"
+
+    assert main(["--state-file", str(state_file), "init"]) == 0
+    assert main([
+        "--state-file",
+        str(state_file),
+        "exercise-generate",
+        "--topic",
+        "FastAPI dependencies",
+        "--concept",
+        "dependency injection",
+        "--concept",
+        "Depends",
+        "--difficulty",
+        "normal",
+        "--task",
+        "Build a route that injects a repository dependency.",
+        "--expected-output",
+        "GET /items returns JSON from the injected repository.",
+        "--constraint",
+        "Use Depends",
+        "--evaluation",
+        "Route uses dependency injection",
+        "--hint",
+        "Start by writing a provider function.",
+    ]) == 0
+
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    exercise_id = state["practice_state"]["exercise_specs"][0]["id"]
+
+    assert main(["--state-file", str(state_file), "exercise-show", exercise_id]) == 0
+    assert main([
+        "--state-file",
+        str(state_file),
+        "attempt",
+        "record",
+        exercise_id,
+        "--answer",
+        "Depends wraps every request like middleware.",
+        "--result",
+        "partial",
+        "--score",
+        "45",
+        "--mistake-type",
+        "concept_confusion",
+        "--feedback",
+        "Confused dependency resolution with middleware execution.",
+        "--review-concept",
+        "dependency injection",
+    ]) == 0
+
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    assert state["practice_state"]["exercise_specs"][0]["difficulty"] == "normal"
+    assert state["practice_state"]["attempt_records"][0]["exercise_id"] == exercise_id
+    assert state["review_state"]["next_review_items"][0]["concept"] == "dependency injection"
+
+    output = capsys.readouterr().out
+    assert '"task": "Build a route that injects a repository dependency."' in output
+    assert '"mistake_type": "concept_confusion"' in output
+
+
+def test_cli_concept_progress_and_review_priority(tmp_path, capsys):
+    state_file = tmp_path / "state.json"
+
+    assert main(["--state-file", str(state_file), "init"]) == 0
+    assert main([
+        "--state-file",
+        str(state_file),
+        "review",
+        "dependency injection",
+        "Explain Depends.",
+        "--result",
+        "incorrect",
+    ]) == 0
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    review_id = state["review_state"]["next_review_items"][0]["id"]
+    assert main([
+        "--state-file",
+        str(state_file),
+        "review-complete",
+        review_id,
+        "--result",
+        "correct",
+    ]) == 0
+    assert main(["--state-file", str(state_file), "concept-progress"]) == 0
+    assert main(["--state-file", str(state_file), "review-priority", "--date", "2999-01-01", "--limit", "1"]) == 0
+
+    output = capsys.readouterr().out
+    assert '"dependency injection"' in output
+    assert '"correct_streak": 1' in output
+    assert '"priority"' in output
+
+
+def test_cli_dashboard_outputs_human_readable_state(tmp_path, capsys):
+    state_file = tmp_path / "state.json"
+
+    assert main(["--state-file", str(state_file), "init"]) == 0
+    assert main(["--state-file", str(state_file), "profile", "--goal", "Learn FastAPI", "--outcome", "Build a RAG API"]) == 0
+    assert main(["--state-file", str(state_file), "topic", "dependency injection", "--level", "beginner"]) == 0
+    assert main([
+        "--state-file",
+        str(state_file),
+        "review",
+        "Depends",
+        "Explain Depends.",
+        "--result",
+        "incorrect",
+    ]) == 0
+    assert main(["--state-file", str(state_file), "dashboard", "--date", "2999-01-01"]) == 0
+
+    output = capsys.readouterr().out
+    assert "Learning Accelerator Dashboard" in output
+    assert "Goal: Learn FastAPI" in output
+    assert "Outcome: Build a RAG API" in output
+    assert "Topic: dependency injection (beginner)" in output
+    assert "Depends" in output

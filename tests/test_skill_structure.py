@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,8 +37,14 @@ def main():
         ROOT / "manifest.json",
         ROOT / "skills.sh.json",
         ROOT / "agents" / "openai.yaml",
+        ROOT / "docs" / "community-article.md",
+        ROOT / "docs" / "api.md",
+        ROOT / "docs" / "extending.md",
         ROOT / "docs" / "install.md",
         ROOT / "docs" / "platforms.md",
+        ROOT / "docs" / "release.md",
+        ROOT / "schemas" / "learning_state.schema.json",
+        ROOT / "CHANGELOG.md",
         ROOT / "references" / "learning_os_protocol.md",
         ROOT / "examples" / "no_prior_programming_example.md",
         ROOT / "examples" / "language_learning_example.md",
@@ -49,9 +56,12 @@ def main():
         ROOT / "examples" / "project_learning_example.md",
         ROOT / "learning_accelerator" / "state.py",
         ROOT / "learning_accelerator" / "cli.py",
+        ROOT / "learning_accelerator" / "dashboard.py",
+        ROOT / "learning_accelerator" / "tui.py",
         ROOT / "pyproject.toml",
         ROOT / ".gitignore",
         ROOT / ".github" / "workflows" / "ci.yml",
+        ROOT / ".github" / "workflows" / "release.yml",
     ]
 
     for file in required_files:
@@ -127,6 +137,11 @@ def main():
         "codex_skill_installer",
         "github_source",
         "as_codex_local_dev",
+        "schemas/learning_state.schema.json",
+        "docs/api.md",
+        "docs/extending.md",
+        "CHANGELOG.md",
+        "docs/release.md",
     ])
 
     assert_contains(ROOT / "skills.sh.json", [
@@ -140,8 +155,18 @@ def main():
         "Learning State Schema",
         "Spaced Repetition",
         "Exercise Generation",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "ConceptProgress",
         "Error Analysis",
         "Difficulty Adjustment",
+        "exercise-generate",
+        "exercise-show",
+        "attempt record",
+        "concept-progress",
+        "review-priority",
+        "dashboard",
+        "tui",
         "review-complete",
         "prompt-context",
         "Task-Driven Learning",
@@ -223,6 +248,28 @@ def main():
         "SYSTEM_PROMPT.md",
     ])
 
+    assert_contains(ROOT / "docs" / "community-article.md", [
+        "General Learning OS",
+        "整体架构",
+        "```mermaid",
+        "Agent 工作流",
+        "状态流转图",
+        "难度调整逻辑",
+        "多平台适配",
+        "安装和分发",
+        "和已有学习类 Skill 的区别",
+        "self-learning",
+        "continuous-learning",
+        "coding tutor",
+        "一个真实回答过程会是什么样",
+        "函数定义格式",
+        "npx skills add Maolipeng/Learning-Accelerator --skill learning-accelerator",
+        "prompt-context",
+        "review-complete",
+        "exercise-generate",
+        "attempt record",
+    ])
+
     assert_contains(ROOT / "docs" / "install.md", [
         "Install From GitHub In Codex",
         "skills.sh",
@@ -238,6 +285,75 @@ def main():
         "~/.codex/skills/learning-accelerator",
         "Python CLI",
     ])
+
+    assert_contains(ROOT / "docs" / "api.md", [
+        "JsonStateStore",
+        "create_review_item",
+        "create_exercise_spec",
+        "record_attempt",
+        "priority_reviews",
+        "concept_progress",
+        "CLI Commands",
+        "dashboard",
+        "tui",
+        "version",
+        "Error Handling",
+    ])
+
+    assert_contains(ROOT / "docs" / "extending.md", [
+        "Extension Points",
+        "DOMAIN_TEMPLATES",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "ConceptProgress",
+        "Review Strategy",
+        "Do Not Break",
+    ])
+
+    assert_contains(ROOT / "CHANGELOG.md", [
+        "# Changelog",
+        "Unreleased",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "ConceptProgress",
+        "dashboard",
+        "tui",
+        "v1.6.0",
+        "v1.2.0",
+    ])
+
+    assert_contains(ROOT / "docs" / "release.md", [
+        "Release Checklist",
+        "version",
+        "CHANGELOG.md",
+        "git tag",
+        "python -m pytest",
+        "release.yml",
+        "artifact",
+    ])
+
+    assert_contains(ROOT / ".github" / "workflows" / "release.yml", [
+        "Release",
+        "on:",
+        "tags:",
+        "v*",
+        "python -m pytest",
+        "python -m build",
+        "actions/upload-artifact",
+    ])
+
+    schema = json.loads(read_text(ROOT / "schemas" / "learning_state.schema.json"))
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["title"] == "Learning Accelerator State"
+    assert schema["properties"]["schema_version"]["const"] == 1
+    assert "learner_profile" in schema["required"]
+    assert "topic_state" in schema["required"]
+    assert "practice_state" in schema["required"]
+    assert "review_state" in schema["required"]
+    assert "difficulty_state" in schema["required"]
+    assert "concept_progress" in schema["properties"]["topic_state"]["properties"]
+    assert "exercise_specs" in schema["properties"]["practice_state"]["properties"]
+    assert "attempt_records" in schema["properties"]["practice_state"]["properties"]
 
     assert not (ROOT / ".DS_Store").exists(), ".DS_Store should not be packaged"
     assert "learning-agent-skill-prompt" not in read_text(ROOT / "README.md")
@@ -276,6 +392,8 @@ def test_cli_and_coverage_configuration():
         "Learning-Accelerator",
         "review-complete",
         "prompt-context",
+        "dashboard",
+        "tui",
         "一轮真实学习落盘流程",
         "零编程基础入门",
         "日语学习",
@@ -300,12 +418,34 @@ def test_cli_and_coverage_configuration():
         "GEMINI.md",
         ".cursor/rules/learning-accelerator.mdc",
         "docs/platforms.md",
+        "docs/api.md",
+        "docs/extending.md",
+        "schemas/learning_state.schema.json",
+        "CHANGELOG.md",
+        "docs/release.md",
+        "version",
         "~/.claude/skills/learning-accelerator",
         "python -m pip install -e \".[dev]\"",
         "python -m pip install --upgrade pip",
         "python -m pip install -e .",
         "本地测试和覆盖率",
         ".github/workflows/ci.yml",
+    ])
+
+    assert_contains(ROOT / "learning_accelerator" / "dashboard.py", [
+        "render_dashboard",
+        "Learning Accelerator Dashboard",
+        "Priority Reviews",
+        "Concept Progress",
+        "Current Tasks",
+    ])
+
+    assert_contains(ROOT / "learning_accelerator" / "tui.py", [
+        "run_tui",
+        "Learning Accelerator TUI",
+        "Priority Reviews",
+        "Concept Progress",
+        "Add Task",
     ])
 
 

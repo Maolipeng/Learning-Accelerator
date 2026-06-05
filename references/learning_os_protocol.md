@@ -37,10 +37,50 @@ Use this shape when persistent memory, the bundled `learning_accelerator` JSON s
     "level": "beginner|intermediate|advanced",
     "mastered_concepts": [],
     "weak_concepts": [],
+    "concept_progress": {
+      "concept name": {
+        "concept": "",
+        "strength": 0.5,
+        "attempts": 0,
+        "correct_streak": 0,
+        "last_reviewed_at": "YYYY-MM-DD",
+        "next_due_at": "YYYY-MM-DD",
+        "failure_count": 0
+      }
+    },
     "misconceptions": [],
     "open_questions": []
   },
   "practice_state": {
+    "exercise_specs": [
+      {
+        "id": "stable-exercise-id",
+        "topic": "",
+        "concepts": [],
+        "difficulty": "easy|normal|stretch",
+        "goal": "",
+        "task": "",
+        "input": "",
+        "expected_output": "",
+        "constraints": [],
+        "evaluation_criteria": [],
+        "hint": "",
+        "created_at": "YYYY-MM-DD"
+      }
+    ],
+    "attempt_records": [
+      {
+        "id": "stable-attempt-id",
+        "exercise_id": "stable-exercise-id",
+        "user_answer": "",
+        "result": "pass|partial|fail",
+        "score": 0,
+        "mistake_type": "",
+        "feedback": "",
+        "concepts_to_review": [],
+        "created_at": "YYYY-MM-DD"
+      }
+    ],
     "completed_exercises": [],
     "failed_exercises": [],
     "current_tasks": [],
@@ -88,6 +128,10 @@ Do not ask the user to review everything. Select 2-5 high-value items:
 - concepts required by the next task or project step,
 - concepts the user could not explain back.
 
+Track each concept with `ConceptProgress` so review scheduling does not depend only on conversation memory. `strength` is a 0.0-1.0 estimate, `correct_streak` controls interval growth, `failure_count` keeps repeated weak spots visible, and `next_due_at` lets agents rank what to review first.
+
+Use `review-priority` when a turn needs a short review set. It should prefer due items, weak concepts, lower-strength concepts, and concepts with repeated failures.
+
 ## Exercise Generation
 
 Generate exercises with:
@@ -99,11 +143,37 @@ Generate exercises with:
 - `evaluation`: how the answer will be judged,
 - `hint`: one optional hint, hidden until needed.
 
+When local persistence is available, convert each generated exercise into an `ExerciseSpec` before presenting it as durable practice. The LLM may draft the task, hint, and evaluation text, but Python owns the stable id, storage, and later lookup. An `ExerciseSpec` should include:
+
+- `topic`: the current learning topic,
+- `concepts`: one or more tested concepts,
+- `difficulty`: `easy`, `normal`, or `stretch`,
+- `goal`: the learning purpose,
+- `task`: the learner-facing instruction,
+- `input` and `expected_output`: concrete behavior when applicable,
+- `constraints`: required boundaries,
+- `evaluation_criteria`: how the answer will be judged,
+- `hint`: one optional hint.
+
 Use three levels:
 
 - `easy`: direct application of the just-learned concept.
 - `normal`: combine the concept with one familiar idea.
 - `stretch`: apply it in a realistic project-like scenario.
+
+After the learner answers, persist an `AttemptRecord`. The evaluator can be an LLM, a human, or a deterministic checker, but the result should be structured:
+
+- `exercise_id`: the related `ExerciseSpec`,
+- `user_answer`: the answer or attempt summary,
+- `result`: `pass`, `partial`, or `fail`,
+- `score`: 0-100,
+- `mistake_type`: the misconception category when useful,
+- `feedback`: concise evaluator feedback,
+- `concepts_to_review`: concepts that should feed review scheduling.
+
+Use `pass` attempts as positive difficulty evidence. Treat `partial` and `fail` as weak-concept evidence and schedule the listed concepts for review.
+
+Each `AttemptRecord` should also update `ConceptProgress`: `pass` increases strength and streak, while `partial` or `fail` resets the streak, increments failures, lowers strength, and makes the concept due immediately.
 
 ## Error Analysis
 
@@ -164,12 +234,23 @@ python -m learning_accelerator.cli --state-file .learning/state.json domain-temp
 python -m learning_accelerator.cli --state-file .learning/state.json profile --domain language --known-skill "中文拼音" --goal "通过日语 N5"
 python -m learning_accelerator.cli --state-file .learning/state.json show
 python -m learning_accelerator.cli --state-file .learning/state.json summary
+python -m learning_accelerator.cli --state-file .learning/state.json dashboard
+python -m learning_accelerator.cli --state-file .learning/state.json tui
 python -m learning_accelerator.cli --state-file .learning/state.json prompt-context
 python -m learning_accelerator.cli --state-file .learning/state.json concept weak "dependency injection"
+python -m learning_accelerator.cli --state-file .learning/state.json concept-progress
 python -m learning_accelerator.cli --state-file .learning/state.json due
+python -m learning_accelerator.cli --state-file .learning/state.json review-priority --limit 3
 python -m learning_accelerator.cli --state-file .learning/state.json review-complete "<review-id-from-due>" --result correct
 python -m learning_accelerator.cli --state-file .learning/state.json task add "每天复习 5 个假名"
 python -m learning_accelerator.cli --state-file .learning/state.json exercise complete "Build /ask mock API" --concept "FastAPI route"
+python -m learning_accelerator.cli --state-file .learning/state.json exercise-generate --topic "FastAPI dependencies" --concept "dependency injection" --difficulty normal --task "Explain why Depends is not middleware." --evaluation "Mentions per-request dependency resolution"
+python -m learning_accelerator.cli --state-file .learning/state.json exercise-show "<exercise-id>"
+python -m learning_accelerator.cli --state-file .learning/state.json attempt record "<exercise-id>" --answer "Depends wraps every request like middleware." --result partial --score 45 --mistake-type concept_confusion --feedback "Confused dependency resolution with middleware." --review-concept "dependency injection"
 ```
 
 The CLI stores the same schema documented above, so agents can either call the CLI or read/write JSON directly through the `JsonStateStore` API.
+
+Use `dashboard` when a human wants a terminal UI view of the current learning state. It renders goal, outcome, topic, weak concepts, priority reviews, concept progress, current tasks, and difficulty without requiring the user to inspect JSON.
+
+Use `tui` when a human wants an interactive terminal session. It can show dashboard, priority reviews, concept progress, due reviews, and add current tasks while preserving the same JSON state model.

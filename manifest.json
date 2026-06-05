@@ -1,6 +1,6 @@
 {
   "name": "learning-accelerator",
-  "version": "1.2.0",
+  "version": "1.6.0",
   "description": "A reusable general learning agent skill with JSON persistence, CLI tooling, optional system prompt, review memory, spaced repetition, task-driven learning, exercise generation, error diagnosis, and adaptive difficulty.",
   "entry": "SKILL.md",
   "agent_guide": "AGENTS.md",
@@ -11,6 +11,11 @@
   "system_prompt": "SYSTEM_PROMPT.md",
   "agent_metadata": "agents/openai.yaml",
   "protocol_reference": "references/learning_os_protocol.md",
+  "schema": "schemas/learning_state.schema.json",
+  "api_docs": "docs/api.md",
+  "extension_guide": "docs/extending.md",
+  "release_guide": "docs/release.md",
+  "changelog": "CHANGELOG.md",
   "language": "zh-CN",
   "compatible_with": [
     "Codex skills",
@@ -36,6 +41,8 @@
     "adaptive difficulty",
     "agent summary export",
     "prompt-context export",
+    "terminal dashboard",
+    "interactive TUI",
     "local JSON persistence",
     "CLI tooling",
     "unit test coverage",

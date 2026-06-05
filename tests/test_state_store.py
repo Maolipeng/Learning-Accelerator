@@ -5,7 +5,12 @@ from datetime import date
 
 import pytest
 
-from learning_accelerator.state import JsonStateStore, LearningStateError, create_review_item
+from learning_accelerator.state import (
+    JsonStateStore,
+    LearningStateError,
+    create_exercise_spec,
+    create_review_item,
+)
 
 
 def test_store_loads_default_when_file_is_absent(tmp_path):
@@ -207,6 +212,151 @@ def test_record_exercise_tracks_success_failure_and_difficulty_evidence(tmp_path
     assert state["practice_state"]["completed_exercises"][0]["name"] == "Build /ask mock API"
     assert state["practice_state"]["failed_exercises"][0]["name"] == "Explain dependency injection"
     assert state["difficulty_state"]["evidence"][-1]["signal"] == "exercise_failed"
+
+
+def test_create_and_store_structured_exercise_spec(tmp_path):
+    spec = create_exercise_spec(
+        topic="FastAPI dependencies",
+        concepts=["dependency injection", "Depends"],
+        difficulty="normal",
+        task="Build a route that injects a repository dependency.",
+        expected_output="GET /items returns JSON from the injected repository.",
+        constraints=["Use Depends", "Keep the repository swappable"],
+        evaluation_criteria=["Route uses dependency injection", "No global repository instance"],
+        hint="Start by writing a provider function.",
+    )
+
+    assert spec["id"]
+    assert spec["goal"] == "Practice dependency injection, Depends"
+    assert spec["difficulty"] == "normal"
+    assert spec["input"] == ""
+
+    store = JsonStateStore(tmp_path / "state.json")
+    state = store.add_exercise_spec(spec)
+    duplicate = store.add_exercise_spec(spec)
+
+    specs = duplicate["practice_state"]["exercise_specs"]
+    assert len(specs) == 1
+    assert specs[0]["task"] == "Build a route that injects a repository dependency."
+    assert state["practice_state"]["exercise_specs"][0]["id"] == specs[0]["id"]
+
+
+def test_exercise_spec_rejects_blank_concepts():
+    with pytest.raises(LearningStateError, match="concepts must contain at least one concept"):
+        create_exercise_spec(
+            topic="FastAPI dependencies",
+            concepts=["  "],
+            difficulty="normal",
+            task="Explain Depends.",
+        )
+
+
+def test_record_attempt_updates_review_difficulty_and_concepts(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+    state = store.add_exercise_spec(
+        create_exercise_spec(
+            topic="FastAPI dependencies",
+            concepts=["dependency injection"],
+            difficulty="normal",
+            task="Explain why Depends is not middleware.",
+            evaluation_criteria=["Mentions per-request dependency resolution"],
+        )
+    )
+    exercise_id = state["practice_state"]["exercise_specs"][0]["id"]
+
+    state = store.record_attempt(
+        exercise_id,
+        user_answer="Depends wraps every request like middleware.",
+        result="partial",
+        score=45,
+        mistake_type="concept_confusion",
+        feedback="Confused dependency resolution with middleware execution.",
+        concepts_to_review=["dependency injection"],
+    )
+
+    attempts = state["practice_state"]["attempt_records"]
+    assert attempts[0]["exercise_id"] == exercise_id
+    assert attempts[0]["result"] == "partial"
+    assert attempts[0]["score"] == 45
+    assert attempts[0]["mistake_type"] == "concept_confusion"
+    assert "dependency injection" in state["topic_state"]["weak_concepts"]
+    assert state["review_state"]["next_review_items"][0]["concept"] == "dependency injection"
+    assert state["difficulty_state"]["evidence"][-1]["signal"] == "exercise_failed"
+
+
+def test_record_attempt_updates_concept_progress(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+    state = store.add_exercise_spec(
+        create_exercise_spec(
+            topic="FastAPI dependencies",
+            concepts=["dependency injection"],
+            difficulty="normal",
+            task="Explain why Depends is not middleware.",
+        )
+    )
+    exercise_id = state["practice_state"]["exercise_specs"][0]["id"]
+
+    state = store.record_attempt(
+        exercise_id,
+        user_answer="Depends resolves values per request.",
+        result="pass",
+        score=92,
+        concepts_to_review=["dependency injection"],
+    )
+
+    progress = state["topic_state"]["concept_progress"]["dependency injection"]
+    assert progress["concept"] == "dependency injection"
+    assert progress["attempts"] == 1
+    assert progress["correct_streak"] == 1
+    assert progress["failure_count"] == 0
+    assert progress["strength"] == 0.6
+    assert progress["last_reviewed_at"]
+    assert progress["next_due_at"] > progress["last_reviewed_at"]
+
+    state = store.record_attempt(
+        exercise_id,
+        user_answer="Depends is middleware.",
+        result="partial",
+        score=45,
+        concepts_to_review=["dependency injection"],
+    )
+
+    progress = state["topic_state"]["concept_progress"]["dependency injection"]
+    assert progress["attempts"] == 2
+    assert progress["correct_streak"] == 0
+    assert progress["failure_count"] == 1
+    assert progress["strength"] == 0.4
+    assert progress["next_due_at"] == progress["last_reviewed_at"]
+
+
+def test_complete_review_updates_concept_progress_streaks(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+    state = store.add_review("dependency injection", "Explain Depends.", result="incorrect")
+    review_id = state["review_state"]["next_review_items"][0]["id"]
+
+    state = store.complete_review(review_id, result="correct", reschedule=True)
+    review_id = state["review_state"]["next_review_items"][0]["id"]
+    state = store.complete_review(review_id, result="second_correct", reschedule=True)
+
+    progress = state["topic_state"]["concept_progress"]["dependency injection"]
+    assert progress["attempts"] == 2
+    assert progress["correct_streak"] == 2
+    assert progress["failure_count"] == 0
+    assert progress["strength"] == 0.8
+    assert "dependency injection" not in state["topic_state"]["weak_concepts"]
+
+
+def test_priority_reviews_rank_due_and_weak_concepts(tmp_path):
+    store = JsonStateStore(tmp_path / "state.json")
+    store.add_review("easy concept", "Explain easy.", result="third_correct")
+    store.add_review("weak concept", "Explain weak.", result="incorrect")
+    store.record_concept("weak concept", "weak")
+
+    priority = store.priority_reviews(on_date="2999-01-01", limit=1)
+
+    assert len(priority) == 1
+    assert priority[0]["concept"] == "weak concept"
+    assert priority[0]["priority"] > 0
 
 
 def test_record_evidence_adjusts_difficulty_from_recent_signals(tmp_path):

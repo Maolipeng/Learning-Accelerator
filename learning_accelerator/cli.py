@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .state import JsonStateStore
+from . import __version__
+from .dashboard import render_dashboard
+from .state import SCHEMA_VERSION, JsonStateStore, create_exercise_spec
+from .tui import run_tui
 
 DEFAULT_STATE_PATH = Path.home() / ".learning-accelerator" / "state.json"
 
@@ -28,10 +31,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    subparsers.add_parser("version", help="Print package and state schema version as JSON.")
     subparsers.add_parser("init", help="Create or overwrite a state file with the default schema.")
     subparsers.add_parser("show", help="Print the full learning state as JSON.")
     summary = subparsers.add_parser("summary", help="Print a compact learning-state summary as JSON.")
     summary.add_argument("--date", help="ISO date for due review filtering, defaults to today.")
+    dashboard = subparsers.add_parser("dashboard", help="Print a human-readable terminal dashboard.")
+    dashboard.add_argument("--date", help="ISO date for due review filtering, defaults to today.")
+    tui = subparsers.add_parser("tui", help="Run the interactive terminal UI.")
+    tui.add_argument("--date", help="ISO date for due review filtering, defaults to today.")
     prompt_context = subparsers.add_parser("prompt-context", help="Print concise prompt context for another agent.")
     prompt_context.add_argument("--date", help="ISO date for due review filtering, defaults to today.")
 
@@ -64,6 +72,8 @@ def build_parser() -> argparse.ArgumentParser:
     concept.add_argument("status", choices=["mastered", "weak"])
     concept.add_argument("name", help="Concept name.")
 
+    subparsers.add_parser("concept-progress", help="Print per-concept progress as JSON.")
+
     review = subparsers.add_parser("review", help="Schedule a review prompt.")
     review.add_argument("concept", help="Concept to review.")
     review.add_argument("prompt", help="Recall prompt.")
@@ -93,11 +103,56 @@ def build_parser() -> argparse.ArgumentParser:
     due = subparsers.add_parser("due", help="Print review items due by a date.")
     due.add_argument("--date", help="ISO date, defaults to today.")
 
+    review_priority = subparsers.add_parser("review-priority", help="Print priority-ranked review items.")
+    review_priority.add_argument("--date", help="ISO date, defaults to today.")
+    review_priority.add_argument("--limit", type=int, default=5, help="Maximum review items to print.")
+
     exercise = subparsers.add_parser("exercise", help="Record a completed or failed exercise.")
     exercise.add_argument("status", choices=["complete", "fail"])
     exercise.add_argument("name", help="Exercise name.")
     exercise.add_argument("--concept", action="append", default=[], help="Concept covered by this exercise.")
     exercise.add_argument("--notes", default="", help="Optional exercise notes.")
+
+    exercise_generate = subparsers.add_parser("exercise-generate", help="Create and persist a structured exercise spec.")
+    exercise_generate.add_argument("--topic", required=True, help="Exercise topic.")
+    exercise_generate.add_argument("--concept", action="append", required=True, help="Concept covered by the exercise.")
+    exercise_generate.add_argument(
+        "--difficulty",
+        required=True,
+        choices=["easy", "normal", "stretch"],
+        help="Exercise difficulty.",
+    )
+    exercise_generate.add_argument("--goal", help="Optional exercise goal.")
+    exercise_generate.add_argument("--task", required=True, help="Exercise task.")
+    exercise_generate.add_argument("--input", default="", help="Optional input data or prompt.")
+    exercise_generate.add_argument("--expected-output", default="", help="Expected output or behavior.")
+    exercise_generate.add_argument("--constraint", action="append", default=[], help="Exercise constraint. Can be repeated.")
+    exercise_generate.add_argument(
+        "--evaluation",
+        action="append",
+        default=[],
+        help="Evaluation criterion. Can be repeated.",
+    )
+    exercise_generate.add_argument("--hint", default="", help="Optional hint.")
+
+    exercise_show = subparsers.add_parser("exercise-show", help="Print a structured exercise spec by id.")
+    exercise_show.add_argument("exercise_id", help="Exercise spec id.")
+
+    attempt = subparsers.add_parser("attempt", help="Manage structured exercise attempts.")
+    attempt_subparsers = attempt.add_subparsers(dest="attempt_command", required=True)
+    attempt_record = attempt_subparsers.add_parser("record", help="Record a structured exercise attempt.")
+    attempt_record.add_argument("exercise_id", help="Exercise spec id.")
+    attempt_record.add_argument("--answer", required=True, help="Learner answer or attempt summary.")
+    attempt_record.add_argument("--result", required=True, choices=["pass", "partial", "fail"], help="Attempt result.")
+    attempt_record.add_argument("--score", required=True, type=int, help="Score from 0 to 100.")
+    attempt_record.add_argument("--mistake-type", default="", help="Mistake category, if any.")
+    attempt_record.add_argument("--feedback", default="", help="Feedback from the evaluator.")
+    attempt_record.add_argument(
+        "--review-concept",
+        action="append",
+        default=[],
+        help="Concept to schedule for review. Can be repeated.",
+    )
 
     task = subparsers.add_parser("task", help="Manage current learning tasks.")
     task_subparsers = task.add_subparsers(dest="task_command", required=True)
@@ -117,12 +172,22 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     store = JsonStateStore(args.state_file)
 
-    if args.command == "init":
+    if args.command == "version":
+        _print_json({
+            "name": "learning-accelerator",
+            "version": __version__,
+            "schema_version": SCHEMA_VERSION,
+        })
+    elif args.command == "init":
         _print_json(store.reset())
     elif args.command == "show":
         _print_json(store.load())
     elif args.command == "summary":
         _print_json(store.summary(on_date=args.date))
+    elif args.command == "dashboard":
+        print(render_dashboard(store.summary(on_date=args.date)), end="")
+    elif args.command == "tui":
+        return run_tui(store, on_date=args.date)
     elif args.command == "prompt-context":
         print(store.prompt_context(on_date=args.date))
     elif args.command == "onboarding":
@@ -149,6 +214,8 @@ def main(argv: list[str] | None = None) -> int:
         _print_json(store.set_topic(args.name, level=args.level))
     elif args.command == "concept":
         _print_json(store.record_concept(args.name, args.status))
+    elif args.command == "concept-progress":
+        _print_json(store.load()["topic_state"]["concept_progress"])
     elif args.command == "review":
         _print_json(store.add_review(args.concept, args.prompt, result=args.result, source=args.source))
     elif args.command == "review-complete":
@@ -162,9 +229,40 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "due":
         _print_json(store.due_reviews(on_date=args.date))
+    elif args.command == "review-priority":
+        _print_json(store.priority_reviews(on_date=args.date, limit=args.limit))
     elif args.command == "exercise":
         status = "completed" if args.status == "complete" else "failed"
         _print_json(store.record_exercise(args.name, status=status, concepts=args.concept, notes=args.notes))
+    elif args.command == "exercise-generate":
+        spec = create_exercise_spec(
+            topic=args.topic,
+            concepts=args.concept,
+            difficulty=args.difficulty,
+            goal=args.goal,
+            task=args.task,
+            input_data=args.input,
+            expected_output=args.expected_output,
+            constraints=args.constraint,
+            evaluation_criteria=args.evaluation,
+            hint=args.hint,
+        )
+        _print_json(store.add_exercise_spec(spec))
+    elif args.command == "exercise-show":
+        _print_json(store.exercise_spec(args.exercise_id))
+    elif args.command == "attempt":
+        if args.attempt_command == "record":
+            _print_json(
+                store.record_attempt(
+                    args.exercise_id,
+                    user_answer=args.answer,
+                    result=args.result,
+                    score=args.score,
+                    mistake_type=args.mistake_type,
+                    feedback=args.feedback,
+                    concepts_to_review=args.review_concept,
+                )
+            )
     elif args.command == "task":
         if args.task_command == "add":
             _print_json(store.add_task(args.name, notes=args.notes))

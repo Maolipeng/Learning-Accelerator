@@ -34,10 +34,13 @@ DEFAULT_STATE: dict[str, Any] = {
         "level": "beginner",
         "mastered_concepts": [],
         "weak_concepts": [],
+        "concept_progress": {},
         "misconceptions": [],
         "open_questions": [],
     },
     "practice_state": {
+        "exercise_specs": [],
+        "attempt_records": [],
         "completed_exercises": [],
         "failed_exercises": [],
         "current_tasks": [],
@@ -66,6 +69,8 @@ REVIEW_INTERVALS_BY_RESULT = {
 
 POSITIVE_DIFFICULTY_SIGNALS = {"exercise_completed", "explain_correct", "recall_correct"}
 NEGATIVE_DIFFICULTY_SIGNALS = {"exercise_failed", "recall_incorrect", "explain_fuzzy", "setup_failed"}
+EXERCISE_DIFFICULTIES = {"easy", "normal", "stretch"}
+ATTEMPT_RESULTS = {"pass", "partial", "fail"}
 
 DOMAIN_TEMPLATES: dict[str, dict[str, Any]] = {
     "general": {
@@ -177,6 +182,48 @@ def create_review_item(
         "result": result,
         "created_at": base_day.isoformat(),
         "due_at": due_day.isoformat(),
+    }
+
+
+def create_exercise_spec(
+    *,
+    topic: str,
+    concepts: list[str],
+    difficulty: str,
+    task: str,
+    goal: str | None = None,
+    input_data: str = "",
+    expected_output: str = "",
+    constraints: list[str] | None = None,
+    evaluation_criteria: list[str] | None = None,
+    hint: str = "",
+) -> dict[str, Any]:
+    """Create a structured exercise specification for agent-generated practice."""
+
+    if difficulty not in EXERCISE_DIFFICULTIES:
+        allowed = ", ".join(sorted(EXERCISE_DIFFICULTIES))
+        raise LearningStateError(f"difficulty must be one of: {allowed}")
+    if not task.strip():
+        raise LearningStateError("task must not be empty")
+
+    clean_concepts = [concept.strip() for concept in concepts if concept.strip()]
+    if not clean_concepts:
+        raise LearningStateError("concepts must contain at least one concept")
+    clean_task = task.strip()
+    exercise_goal = goal.strip() if goal else f"Practice {', '.join(clean_concepts)}"
+    return {
+        "id": _stable_id("exercise-spec", topic, ",".join(clean_concepts), difficulty, clean_task),
+        "topic": topic.strip(),
+        "concepts": clean_concepts,
+        "difficulty": difficulty,
+        "goal": exercise_goal,
+        "task": clean_task,
+        "input": input_data,
+        "expected_output": expected_output,
+        "constraints": constraints or [],
+        "evaluation_criteria": evaluation_criteria or [],
+        "hint": hint,
+        "created_at": today_iso(),
     }
 
 
@@ -364,16 +411,16 @@ class JsonStateStore:
         review_state["review_history"] = history
 
         if reschedule:
-            review_state["next_review_items"] = _upsert_by_id(
-                review_state["next_review_items"],
-                create_review_item(
-                    str(matched.get("concept", "")),
-                    str(matched.get("prompt", "")),
-                    result=result,
-                    source=str(matched.get("source", "manual")),
-                ),
+            self._schedule_review_in_state(
+                state,
+                str(matched.get("concept", "")),
+                str(matched.get("prompt", "")),
+                result=result,
+                source=str(matched.get("source", "manual")),
             )
-        self._apply_review_result_to_concepts(state, str(matched.get("concept", "")), result)
+        concept = str(matched.get("concept", ""))
+        self._apply_review_result_to_concepts(state, concept, result)
+        self._update_concept_progress_in_state(state, concept, result)
         self._record_evidence_in_state(state, "recall_correct" if result.startswith("correct") else "recall_incorrect", matched.get("prompt", ""))
         return self.save(state)
 
@@ -387,6 +434,31 @@ class JsonStateStore:
         candidates.extend(_ensure_list(review_state.get("due_items"), "due_items"))
         candidates.extend(_ensure_list(review_state.get("next_review_items"), "next_review_items"))
         return [item for item in candidates if str(item.get("due_at", "")) <= target]
+
+    def priority_reviews(self, on_date: str | None = None, limit: int = 5) -> list[dict[str, Any]]:
+        """Return due review items ranked by weak status and concept strength."""
+
+        state = self.load()
+        target = on_date or today_iso()
+        weak = set(_ensure_list(state["topic_state"].get("weak_concepts"), "weak_concepts"))
+        progress = state["topic_state"].get("concept_progress", {})
+        ranked = []
+        for item in self.due_reviews(on_date=target):
+            concept = str(item.get("concept", ""))
+            concept_progress = progress.get(concept, {})
+            strength = float(concept_progress.get("strength", 0.3))
+            due_bonus = 20 if str(item.get("due_at", "")) <= target else 0
+            weak_bonus = 30 if concept in weak else 0
+            low_strength_bonus = int((1.0 - strength) * 20)
+            failure_bonus = int(concept_progress.get("failure_count", 0)) * 3
+            priority = due_bonus + weak_bonus + low_strength_bonus + failure_bonus
+            ranked.append({
+                **item,
+                "priority": priority,
+                "strength": strength,
+            })
+        ranked.sort(key=lambda item: (-int(item.get("priority", 0)), str(item.get("due_at", "")), str(item.get("concept", ""))))
+        return ranked[:limit]
 
     def record_exercise(
         self,
@@ -416,6 +488,76 @@ class JsonStateStore:
         self._record_evidence_in_state(state, signal, notes or name)
         return self.save(state)
 
+    def add_exercise_spec(self, spec: dict[str, Any]) -> dict[str, Any]:
+        """Persist a structured exercise specification."""
+
+        state = self.load()
+        normalized = self._validate_exercise_spec(spec)
+        specs = _ensure_list(state["practice_state"].get("exercise_specs"), "exercise_specs")
+        state["practice_state"]["exercise_specs"] = _upsert_by_id(specs, normalized)
+        return self.save(state)
+
+    def exercise_spec(self, exercise_id: str) -> dict[str, Any]:
+        """Return a persisted exercise specification by id."""
+
+        specs = _ensure_list(self.load()["practice_state"].get("exercise_specs"), "exercise_specs")
+        matched = next((spec for spec in specs if spec.get("id") == exercise_id), None)
+        if matched is None:
+            raise LearningStateError(f"exercise spec not found: {exercise_id}")
+        return matched
+
+    def record_attempt(
+        self,
+        exercise_id: str,
+        *,
+        user_answer: str,
+        result: str,
+        score: int,
+        mistake_type: str = "",
+        feedback: str = "",
+        concepts_to_review: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record an exercise attempt and update review/difficulty signals."""
+
+        if result not in ATTEMPT_RESULTS:
+            allowed = ", ".join(sorted(ATTEMPT_RESULTS))
+            raise LearningStateError(f"result must be one of: {allowed}")
+        if not 0 <= score <= 100:
+            raise LearningStateError("score must be an integer from 0 to 100")
+
+        state = self.load()
+        specs = _ensure_list(state["practice_state"].get("exercise_specs"), "exercise_specs")
+        spec = next((item for item in specs if item.get("id") == exercise_id), None)
+        if spec is None:
+            raise LearningStateError(f"exercise spec not found: {exercise_id}")
+
+        review_concepts = concepts_to_review or list(spec.get("concepts", []))
+        attempt = {
+            "id": _stable_id("attempt", exercise_id, today_iso(), str(len(state["practice_state"].get("attempt_records", [])))),
+            "exercise_id": exercise_id,
+            "user_answer": user_answer,
+            "result": result,
+            "score": score,
+            "mistake_type": mistake_type,
+            "feedback": feedback,
+            "concepts_to_review": review_concepts,
+            "created_at": today_iso(),
+        }
+        attempts = _ensure_list(state["practice_state"].get("attempt_records"), "attempt_records")
+        attempts.append(attempt)
+        state["practice_state"]["attempt_records"] = attempts
+
+        review_result = "correct" if result == "pass" else "incorrect"
+        for concept in review_concepts:
+            prompt = feedback or f"Review {concept} from exercise: {spec.get('task', '')}"
+            self._schedule_review_in_state(state, concept, prompt, result=review_result, source="attempt")
+            self._apply_review_result_to_concepts(state, concept, review_result)
+            self._update_concept_progress_in_state(state, concept, result)
+
+        signal = "exercise_completed" if result == "pass" else "exercise_failed"
+        self._record_evidence_in_state(state, signal, feedback or mistake_type or spec.get("task", ""))
+        return self.save(state)
+
     def record_evidence(self, signal: str, detail: str = "", source: str = "manual") -> dict[str, Any]:
         """Record difficulty evidence and apply the current adjustment."""
 
@@ -441,7 +583,11 @@ class JsonStateStore:
             "level": topic.get("level", "beginner"),
             "mastered_concepts": topic.get("mastered_concepts", []),
             "weak_concepts": topic.get("weak_concepts", []),
+            "concept_progress": topic.get("concept_progress", {}),
             "due_reviews": self.due_reviews(on_date=on_date),
+            "priority_reviews": self.priority_reviews(on_date=on_date),
+            "exercise_specs": practice.get("exercise_specs", []),
+            "attempt_records": practice.get("attempt_records", []),
             "current_tasks": practice.get("current_tasks", []),
             "current_project_tasks": practice.get("current_project_tasks", []),
             "current_difficulty": difficulty.get("current_difficulty", 1),
@@ -461,6 +607,7 @@ class JsonStateStore:
             f"目标结果：{summary['target_outcome'] or '未设置'}",
             f"薄弱点：{', '.join(summary['weak_concepts']) if summary['weak_concepts'] else '无'}",
             f"今天需要复习：{', '.join(due_concepts) if due_concepts else '无'}",
+            f"优先复习：{', '.join(str(item.get('concept', '')) for item in summary['priority_reviews']) if summary['priority_reviews'] else '无'}",
             f"下一步任务：{', '.join(task['name'] for task in summary['current_tasks']) if summary['current_tasks'] else '未设置'}",
             f"当前难度：{summary['current_difficulty']}，下一步调整：{summary['next_adjustment']}",
         ]
@@ -492,6 +639,10 @@ class JsonStateStore:
         if not profile.get("target_project"):
             profile["target_project"] = profile.get("target_outcome", "")
         state["learner_profile"] = profile
+        topic_state = state.get("topic_state", {})
+        if "concept_progress" not in topic_state:
+            topic_state["concept_progress"] = {}
+        state["topic_state"] = topic_state
         practice_state = state.get("practice_state", {})
         if not practice_state.get("current_tasks"):
             practice_state["current_tasks"] = [
@@ -545,6 +696,89 @@ class JsonStateStore:
         if not isinstance(difficulty, int) or not 1 <= difficulty <= 5:
             raise LearningStateError("difficulty_state.current_difficulty must be an integer from 1 to 5")
         return normalized
+
+    @staticmethod
+    def _validate_exercise_spec(spec: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(spec, dict):
+            raise LearningStateError("exercise spec must be an object")
+        normalized = {
+            "id": spec.get("id") or _stable_id(
+                "exercise-spec",
+                str(spec.get("topic", "")),
+                ",".join(str(concept) for concept in spec.get("concepts", [])),
+                str(spec.get("difficulty", "")),
+                str(spec.get("task", "")),
+            ),
+            "topic": str(spec.get("topic", "")),
+            "concepts": _ensure_list(spec.get("concepts"), "exercise_spec.concepts"),
+            "difficulty": str(spec.get("difficulty", "")),
+            "goal": str(spec.get("goal", "")),
+            "task": str(spec.get("task", "")),
+            "input": str(spec.get("input", "")),
+            "expected_output": str(spec.get("expected_output", "")),
+            "constraints": _ensure_list(spec.get("constraints"), "exercise_spec.constraints"),
+            "evaluation_criteria": _ensure_list(
+                spec.get("evaluation_criteria"),
+                "exercise_spec.evaluation_criteria",
+            ),
+            "hint": str(spec.get("hint", "")),
+            "created_at": str(spec.get("created_at", today_iso())),
+        }
+        if normalized["difficulty"] not in EXERCISE_DIFFICULTIES:
+            allowed = ", ".join(sorted(EXERCISE_DIFFICULTIES))
+            raise LearningStateError(f"exercise_spec.difficulty must be one of: {allowed}")
+        if not normalized["concepts"]:
+            raise LearningStateError("exercise_spec.concepts must contain at least one concept")
+        if not normalized["task"].strip():
+            raise LearningStateError("exercise_spec.task must not be empty")
+        return normalized
+
+    @staticmethod
+    def _schedule_review_in_state(
+        state: dict[str, Any],
+        concept: str,
+        prompt: str,
+        *,
+        result: str,
+        source: str,
+    ) -> None:
+        next_items = _ensure_list(state["review_state"].get("next_review_items"), "next_review_items")
+        item = create_review_item(concept, prompt, result=result, source=source)
+        state["review_state"]["next_review_items"] = _upsert_by_id(next_items, item)
+
+    @staticmethod
+    def _update_concept_progress_in_state(state: dict[str, Any], concept: str, result: str) -> None:
+        if not concept:
+            return
+        topic = state["topic_state"]
+        progress = topic.setdefault("concept_progress", {})
+        existing = progress.get(concept, {})
+        current_strength = float(existing.get("strength", 0.5))
+        attempts = int(existing.get("attempts", 0)) + 1
+        base_day = date.today()
+
+        if result in {"pass", "correct", "second_correct", "third_correct"}:
+            correct_streak = int(existing.get("correct_streak", 0)) + 1
+            failure_count = 0
+            strength_delta = 0.2 if result in {"second_correct", "third_correct"} else 0.1
+            strength = min(1.0, current_strength + strength_delta)
+            interval = 1 if correct_streak == 1 else 3 if correct_streak == 2 else 7
+        else:
+            correct_streak = 0
+            failure_count = int(existing.get("failure_count", 0)) + 1
+            strength = max(0.0, current_strength - 0.2)
+            interval = 0
+
+        progress[concept] = {
+            "concept": concept,
+            "strength": round(strength, 2),
+            "attempts": attempts,
+            "correct_streak": correct_streak,
+            "last_reviewed_at": base_day.isoformat(),
+            "next_due_at": (base_day + timedelta(days=interval)).isoformat(),
+            "failure_count": failure_count,
+        }
+        topic["concept_progress"] = progress
 
     @staticmethod
     def _apply_review_result_to_concepts(state: dict[str, Any], concept: str, result: str) -> None:

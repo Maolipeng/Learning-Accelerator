@@ -44,6 +44,8 @@
 ├── agents/
 │   └── openai.yaml           # OpenAI/Codex 侧 UI 元数据
 ├── docs/
+│   ├── api.md                # Python API、CLI 命令和错误处理说明
+│   ├── extending.md          # 领域、题型、复习策略和 schema 扩展指南
 │   ├── install.md            # 推荐安装方式和本地开发安装
 │   └── platforms.md          # Codex/Claude/Cursor/Gemini/通用 Agent 适配矩阵
 ├── manifest.json             # 通用安装/兼容性元数据
@@ -53,6 +55,8 @@
 │   └── cli.py
 ├── references/
 │   └── learning_os_protocol.md # 学习状态、复习、练习、错误诊断协议
+├── schemas/
+│   └── learning_state.schema.json # 本地学习状态 JSON Schema
 ├── examples/
 │   ├── no_prior_programming_example.md
 │   ├── language_learning_example.md
@@ -67,6 +71,7 @@
 │   ├── test_state_store.py
 │   └── test_cli.py
 ├── pyproject.toml             # pytest/coverage/console script 配置
+├── CHANGELOG.md               # 版本变更记录
 ├── .gitignore                 # 忽略本地缓存、覆盖率和示例状态文件
 └── .github/workflows/ci.yml   # 单元测试和覆盖率 CI
 ```
@@ -246,7 +251,49 @@ python -m learning_accelerator.cli --state-file .learning/state.json due
 python -m learning_accelerator.cli --state-file .learning/state.json review-complete "<review-id-from-due>" --result correct
 python -m learning_accelerator.cli --state-file .learning/state.json exercise complete "Build /ask mock API" --concept "FastAPI route"
 python -m learning_accelerator.cli --state-file .learning/state.json summary
+python -m learning_accelerator.cli --state-file .learning/state.json dashboard
 python -m learning_accelerator.cli --state-file .learning/state.json prompt-context
+```
+
+如果不想读 JSON，可以使用零依赖终端 UI：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json dashboard
+python -m learning_accelerator.cli --state-file .learning/state.json tui
+```
+
+`dashboard` 直接打印一次状态；`tui` 会进入交互式菜单，可以查看 dashboard、优先复习、概念进度、到期复习，并添加当前任务。
+
+结构化练习可以把 LLM 生成的题目固定成 `ExerciseSpec`，再把用户答案固定成 `AttemptRecord`。这样出题和反馈可以仍由 Agent 完成，但复习、弱点和难度证据由本地状态接管：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json exercise-generate \
+  --topic "FastAPI dependencies" \
+  --concept "dependency injection" \
+  --concept "Depends" \
+  --difficulty normal \
+  --task "Explain why Depends is not middleware." \
+  --expected-output "Answer mentions per-request dependency resolution." \
+  --constraint "Keep the answer under 80 words." \
+  --evaluation "Distinguishes dependency injection from middleware." \
+  --hint "Focus on when the callable runs."
+
+python -m learning_accelerator.cli --state-file .learning/state.json exercise-show "<exercise-id>"
+
+python -m learning_accelerator.cli --state-file .learning/state.json attempt record "<exercise-id>" \
+  --answer "Depends wraps every request like middleware." \
+  --result partial \
+  --score 45 \
+  --mistake-type concept_confusion \
+  --feedback "Confused dependency resolution with middleware execution." \
+  --review-concept "dependency injection"
+```
+
+每次复习和结构化练习都会更新 `ConceptProgress`。可以单独查看概念强度、连续正确次数和下次复习时间，也可以让系统只挑最高优先级的复习项：
+
+```bash
+python -m learning_accelerator.cli --state-file .learning/state.json concept-progress
+python -m learning_accelerator.cli --state-file .learning/state.json review-priority --limit 3
 ```
 
 一轮真实学习落盘流程：
@@ -269,6 +316,9 @@ python -m learning_accelerator.cli --state-file .learning/state.json exercise co
 
 # 5. Agent 结束前读取结构化摘要
 python -m learning_accelerator.cli --state-file .learning/state.json summary
+
+# 6. 用户查看终端 dashboard
+python -m learning_accelerator.cli --state-file .learning/state.json dashboard
 ```
 
 如果想使用 console script，先在仓库根目录安装为可编辑包：
@@ -279,6 +329,20 @@ learning-accelerator --state-file .learning/state.json show
 ```
 
 更多命令见 `examples/persistence_cli_example.md`。
+
+开发者文档：
+
+- API 说明：`docs/api.md`
+- 扩展指南：`docs/extending.md`
+- 状态 JSON Schema：`schemas/learning_state.schema.json`
+- 版本记录：`CHANGELOG.md`
+- 发布流程：`docs/release.md`
+
+查看当前包版本和状态 schema 版本：
+
+```bash
+python -m learning_accelerator.cli version
+```
 
 ### 方式四：作为通用提示词
 

@@ -8,10 +8,13 @@ from .state import (
     today_iso,
 )
 
+__version__ = "1.6.0"
+
 __all__ = [
     "DEFAULT_STATE",
     "JsonStateStore",
     "LearningStateError",
+    "__version__",
     "create_review_item",
     "today_iso",
 ]
