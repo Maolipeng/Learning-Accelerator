@@ -34,6 +34,8 @@ def main():
         ROOT / "SYSTEM_PROMPT.md",
         ROOT / ".cursor" / "rules" / "learning-accelerator.mdc",
         ROOT / "README.md",
+        ROOT / "README.zh-CN.md",
+        ROOT / "README.en.md",
         ROOT / "manifest.json",
         ROOT / "skills.sh.json",
         ROOT / "agents" / "openai.yaml",
@@ -43,6 +45,9 @@ def main():
         ROOT / "docs" / "install.md",
         ROOT / "docs" / "platforms.md",
         ROOT / "docs" / "release.md",
+        ROOT / "docs" / "technical.md",
+        ROOT / "docs" / "technical.zh-CN.md",
+        ROOT / "docs" / "technical.en.md",
         ROOT / "schemas" / "learning_state.schema.json",
         ROOT / "CHANGELOG.md",
         ROOT / "references" / "learning_os_protocol.md",
@@ -142,6 +147,11 @@ def main():
         "docs/extending.md",
         "CHANGELOG.md",
         "docs/release.md",
+        "docs/technical.md",
+        "README.zh-CN.md",
+        "README.en.md",
+        "docs/technical.zh-CN.md",
+        "docs/technical.en.md",
     ])
 
     assert_contains(ROOT / "skills.sh.json", [
@@ -332,6 +342,51 @@ def main():
         "artifact",
     ])
 
+    assert_contains(ROOT / "docs" / "technical.md", [
+        "Technical Architecture",
+        "System Boundary",
+        "Module Map",
+        "State Flow",
+        "Learning State Model",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "ConceptProgress",
+        "Review Priority",
+        "CLI Surface",
+        "Testing Strategy",
+        "Release Boundary",
+    ])
+
+    assert_contains(ROOT / "docs" / "technical.zh-CN.md", [
+        "技术架构",
+        "系统边界",
+        "模块地图",
+        "状态流",
+        "学习状态模型",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "ConceptProgress",
+        "复习优先级",
+        "CLI 表面",
+        "测试策略",
+        "发布边界",
+    ])
+
+    assert_contains(ROOT / "docs" / "technical.en.md", [
+        "Technical Architecture",
+        "System Boundary",
+        "Module Map",
+        "State Flow",
+        "Learning State Model",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "ConceptProgress",
+        "Review Priority",
+        "CLI Surface",
+        "Testing Strategy",
+        "Release Boundary",
+    ])
+
     assert_contains(ROOT / ".github" / "workflows" / "release.yml", [
         "Release",
         "on:",
@@ -387,18 +442,34 @@ def test_cli_and_coverage_configuration():
         "actions/upload-artifact",
     ])
     assert_contains(ROOT / "README.md", [
-        "本地持久化",
         "learning_accelerator.cli",
-        "Learning-Accelerator",
-        "review-complete",
+        "中文文档",
+        "English documentation",
+        "README.zh-CN.md",
+        "README.en.md",
         "prompt-context",
         "dashboard",
         "tui",
+        "General Learning OS",
+        "docs/api.md",
+        "docs/extending.md",
+        "schemas/learning_state.schema.json",
+        "CHANGELOG.md",
+        "docs/release.md",
+        "docs/technical.md",
+        "docs/technical.zh-CN.md",
+        "docs/technical.en.md",
+        "version",
+    ])
+
+    assert_contains(ROOT / "README.zh-CN.md", [
+        "本地持久化",
+        "Learning-Accelerator",
+        "review-complete",
         "一轮真实学习落盘流程",
         "零编程基础入门",
         "日语学习",
         "非技术学习",
-        "General Learning OS",
         "skill-installer",
         "skills.sh",
         "npx skills find learning accelerator",
@@ -418,18 +489,32 @@ def test_cli_and_coverage_configuration():
         "GEMINI.md",
         ".cursor/rules/learning-accelerator.mdc",
         "docs/platforms.md",
-        "docs/api.md",
-        "docs/extending.md",
-        "schemas/learning_state.schema.json",
-        "CHANGELOG.md",
-        "docs/release.md",
-        "version",
         "~/.claude/skills/learning-accelerator",
         "python -m pip install -e \".[dev]\"",
         "python -m pip install --upgrade pip",
         "python -m pip install -e .",
         "本地测试和覆盖率",
         ".github/workflows/ci.yml",
+    ])
+
+    assert_contains(ROOT / "README.en.md", [
+        "Learning Accelerator",
+        "General Learning OS",
+        "What It Is",
+        "Repository Map",
+        "Install as a Skill",
+        "CLI Quick Start",
+        "Structured Practice Flow",
+        "ExerciseSpec",
+        "AttemptRecord",
+        "review-priority",
+        "concept-progress",
+        "dashboard",
+        "tui",
+        "Developer Documentation",
+        "docs/technical.en.md",
+        "schemas/learning_state.schema.json",
+        "python -m pytest",
     ])
 
     assert_contains(ROOT / "learning_accelerator" / "dashboard.py", [
